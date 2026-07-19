@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, HeartPulse, Activity, Sparkles, Baby, Stethoscope,
-  FolderLock, BookOpen, Bot, CalendarClock, Pill, Settings as SettingsIcon, LogOut, Menu, X,
+  FolderLock, BookOpen, Bot, CalendarClock, Pill, Settings as SettingsIcon, Crown, LogOut, Menu, X,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -25,7 +25,7 @@ type ViewKey =
   | 'dashboard' | 'cycle' | 'symptoms' | 'fertility' | 'pregnancy'
   | 'health' | 'documents' | 'journal' | 'ai' | 'appointments' | 'medications' | 'settings';
 
-export function AppShell() {
+export function AppShell({ onAdmin }: { onAdmin?: () => void }) {
   const { t } = useI18n();
   const { profile, signOut } = useAuth();
   const [view, setView] = useState<ViewKey>('dashboard');
@@ -86,6 +86,12 @@ export function AppShell() {
               <LanguageToggle />
               <ThemeToggle />
             </div>
+            {profile?.is_admin && (
+              <button onClick={() => onAdmin?.()} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-500/10">
+                <Crown size={18} />
+                {t('admin.title')}
+              </button>
+            )}
             <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-terre-600 transition-colors hover:bg-terre-50 dark:text-terre-200 dark:hover:bg-terre-500/10">
               <LogOut size={18} />
               {t('app.signOut')}
@@ -121,6 +127,12 @@ export function AppShell() {
                 ))}
               </nav>
               <div className="mt-auto space-y-2 border-t border-aubergine-100 pt-3 dark:border-white/5">
+                {profile?.is_admin && (
+                  <button onClick={() => onAdmin?.()} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-500/10">
+                    <Crown size={18} />
+                    {t('admin.title')}
+                  </button>
+                )}
                 <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-terre-600 transition-colors hover:bg-terre-50 dark:text-terre-200 dark:hover:bg-terre-500/10">
                   <LogOut size={18} />
                   {t('app.signOut')}
@@ -140,7 +152,7 @@ export function AppShell() {
               </span>
             </div>
 
-            {view === 'dashboard' && <Dashboard />}
+            {view === 'dashboard' && <Dashboard onNavigate={handleNav} />}
             {view === 'cycle' && <Cycle />}
             {view === 'symptoms' && <Symptom />}
             {view === 'fertility' && <Fertility />}

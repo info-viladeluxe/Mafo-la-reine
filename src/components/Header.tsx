@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Sparkles } from 'lucide-react';
 import { Logo } from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { ThemeToggle } from './ThemeToggle';
@@ -33,16 +33,16 @@ export function Header({ onAuth }: { onAuth: () => void }) {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <a href="#top" aria-label="Mafo">
+        <a href="#top" aria-label="Mafo" className="shrink-0">
           <Logo />
         </a>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="rounded-full px-3.5 py-2 text-sm font-medium text-aubergine-700 transition-colors hover:bg-aubergine-50 dark:text-sable-100/80 dark:hover:bg-white/5"
+              className="rounded-full px-3.5 py-2 text-sm font-medium text-aubergine-700 transition-colors hover:bg-aubergine-50 hover:text-rose-500 dark:text-sable-100/80 dark:hover:bg-white/5 dark:hover:text-rose-200"
             >
               {l.label}
             </a>
@@ -54,16 +54,24 @@ export function Header({ onAuth }: { onAuth: () => void }) {
             <LanguageToggle />
           </div>
           <ThemeToggle />
-          <a href="#signin" onClick={(e) => { e.preventDefault(); onAuth(); }} className="hidden btn-ghost sm:inline-flex text-sm">
+          <button
+            onClick={(e) => { e.preventDefault(); onAuth(); }}
+            className="hidden btn-ghost text-sm sm:inline-flex"
+          >
             {t('nav.signin')}
-          </a>
-          <a href="#pricing" onClick={(e) => { e.preventDefault(); onAuth(); }} className="hidden btn-primary text-sm sm:inline-flex">
+          </button>
+          <button
+            onClick={(e) => { e.preventDefault(); onAuth(); }}
+            className="hidden btn-primary btn-shimmer text-sm sm:inline-flex"
+          >
+            <Sparkles size={15} />
             {t('nav.startTrial')}
-          </a>
+          </button>
           <button
             onClick={() => setOpen((o) => !o)}
             aria-label="Menu"
-            className="grid h-9 w-9 place-items-center rounded-full border border-aubergine-200 bg-white/60 text-aubergine-700 md:hidden dark:border-white/10 dark:bg-white/5 dark:text-sable-100"
+            aria-expanded={open}
+            className="grid h-9 w-9 place-items-center rounded-full border border-aubergine-200 bg-white/60 text-aubergine-700 transition-colors hover:border-rose-400 hover:text-rose-500 md:hidden dark:border-white/10 dark:bg-white/5 dark:text-sable-100"
           >
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -79,20 +87,20 @@ export function Header({ onAuth }: { onAuth: () => void }) {
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-aubergine-700 hover:bg-aubergine-50 dark:text-sable-100/80 dark:hover:bg-white/5"
+                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-aubergine-700 transition-colors hover:bg-aubergine-50 hover:text-rose-500 dark:text-sable-100/80 dark:hover:bg-white/5"
               >
                 {l.label}
               </a>
             ))}
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between gap-3 pt-3">
               <LanguageToggle />
-              <a
-                href="#pricing"
-                onClick={(e) => { e.preventDefault(); onAuth(); }}
-                className="btn-primary text-sm"
+              <button
+                onClick={(e) => { e.preventDefault(); setOpen(false); onAuth(); }}
+                className="btn-primary btn-shimmer flex-1 text-sm"
               >
+                <Sparkles size={15} />
                 {t('nav.startTrial')}
-              </a>
+              </button>
             </div>
           </div>
         </div>

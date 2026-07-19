@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useCycleState } from '../lib/cycle';
 import { ProgressRing } from './ProgressRing';
 
-export function Dashboard() {
+export function Dashboard({ onNavigate }: { onNavigate?: (k: 'cycle' | 'symptoms' | 'journal' | 'health') => void }) {
   const { t } = useI18n();
   const { profile } = useAuth();
   const cycle = useCycleState();
@@ -103,13 +103,14 @@ export function Dashboard() {
         <h2 className="text-sm font-semibold text-aubergine-700 dark:text-sable-100">{t('dash.quickAdd')}</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { icon: Calendar, label: t('dash.logPeriod'), accent: 'cycle' },
-            { icon: Plus, label: t('dash.logSymptom'), accent: 'terre' },
-            { icon: Sparkles, label: t('dash.logMood'), accent: 'ocre' },
-            { icon: Scale, label: t('dash.logWeight'), accent: 'emeraude' },
+            { icon: Calendar, label: t('dash.logPeriod'), accent: 'cycle', nav: 'cycle' as const },
+            { icon: Plus, label: t('dash.logSymptom'), accent: 'terre', nav: 'symptoms' as const },
+            { icon: Sparkles, label: t('dash.logMood'), accent: 'ocre', nav: 'journal' as const },
+            { icon: Scale, label: t('dash.logWeight'), accent: 'emeraude', nav: 'health' as const },
           ].map((q) => (
             <button
               key={q.label}
+              onClick={() => onNavigate?.(q.nav)}
               className={`flex flex-col items-center gap-2 rounded-2xl border border-aubergine-100 p-4 text-center transition-all hover:-translate-y-0.5 hover:shadow-soft dark:border-white/10 ${
                 q.accent === 'cycle' ? 'bg-cycle/5 text-cycle hover:bg-cycle/10'
                   : q.accent === 'terre' ? 'bg-terre-50 text-terre-500 hover:bg-terre-100 dark:bg-terre-500/10'

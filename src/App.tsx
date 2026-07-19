@@ -8,6 +8,7 @@ import { AuthPage } from './components/AuthPage';
 import { Onboarding } from './components/Onboarding';
 import { AppShell } from './components/AppShell';
 import { SubscriptionGate } from './components/SubscriptionGate';
+import { SuperAdmin } from './components/SuperAdmin';
 import { Logo } from './components/Logo';
 
 type Route = 'landing' | 'auth';
@@ -16,6 +17,7 @@ function Router() {
   const { session, profile, loading } = useAuth();
   const { subscription, loading: subLoading, hasAccess } = useSubscription();
   const [route, setRoute] = useState<Route>('landing');
+  const [adminMode, setAdminMode] = useState(false);
 
   if (loading || (session && subLoading)) {
     return (
@@ -32,11 +34,14 @@ function Router() {
 
   // Authenticated path
   if (session) {
+    if (adminMode && profile?.is_admin) return <SuperAdmin onExit={() => setAdminMode(false)} />;
     if (!profile?.onboarding_completed) return <Onboarding />;
     if (!hasAccess && subscription !== null) return <SubscriptionGate />;
     if (!hasAccess) return <SubscriptionGate />;
-    return <AppShell />;
+    return <AppShell onAdmin={() => setAdminMode(true)} />;
   }
+
+
 
   // Public path
   if (route === 'auth') return <AuthPage onBack={() => setRoute('landing')} />;
