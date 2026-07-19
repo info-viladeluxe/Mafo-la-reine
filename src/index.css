@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply font-sans antialiased bg-sable-100 text-aubergine-900 dark:bg-indigo-400 dark:text-sable-100;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    @apply bg-rose-200 text-aubergine-900;
+  }
+  /* Tabular numerals for data displays */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ocre-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-sm { @apply px-3.5 py-2 text-sm; }
+  .btn-md { @apply px-5 py-2.5 text-sm; }
+  .btn-lg { @apply px-6 py-3 text-base; }
+  .btn-block { @apply w-full; }
+  .btn-primary {
+    @apply btn bg-rose-500 text-white hover:bg-rose-600 active:scale-[0.98] shadow-soft;
+  }
+  .btn-aubergine {
+    @apply btn bg-aubergine-600 text-white hover:bg-aubergine-700 active:scale-[0.98] shadow-soft;
+  }
+  .btn-ocre {
+    @apply btn bg-ocre-400 text-aubergine-900 hover:bg-ocre-500 hover:text-white active:scale-[0.98] shadow-soft;
+  }
+  .btn-emeraude {
+    @apply btn bg-emeraude-500 text-white hover:bg-emeraude-600 active:scale-[0.98] shadow-soft;
+  }
+  .btn-outline {
+    @apply btn border border-aubergine-200 text-aubergine-700 hover:border-aubergine-400 hover:bg-aubergine-50 dark:border-sable-100/20 dark:text-sable-100 dark:hover:bg-white/5;
+  }
+  .btn-ghost {
+    @apply btn text-aubergine-700 hover:bg-aubergine-50 dark:text-sable-100 dark:hover:bg-white/5;
+  }
+  .btn-danger {
+    @apply btn bg-terre-500 text-white hover:bg-terre-600 active:scale-[0.98] shadow-soft;
+  }
+  .btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    transition: transform 0.6s ease;
+  }
+  .btn-shimmer:hover::after {
+    transform: translateX(100%);
+  }
+  .card {
+    @apply rounded-2xl bg-white shadow-soft dark:bg-indigo-300 dark:border dark:border-white/5;
+  }
+  .card-hover {
+    @apply card transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-lg;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-xl bg-aubergine-100/60 dark:bg-white/5;
+  }
+}
+
+/* Smooth scroll for in-page nav */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-rose-200 dark:bg-white/10;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-rose-300 dark:bg-white/20;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
