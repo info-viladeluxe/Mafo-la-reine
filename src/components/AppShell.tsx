@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, HeartPulse, Activity, Sparkles, Baby, Stethoscope,
-  FolderLock, BookOpen, Bot, CalendarClock, Pill, Settings, LogOut, Menu, X,
+  FolderLock, BookOpen, Bot, CalendarClock, Pill, Settings as SettingsIcon, LogOut, Menu, X,
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -11,6 +11,15 @@ import { LanguageToggle } from './LanguageToggle';
 import { Dashboard } from './Dashboard';
 import { Cycle } from './Cycle';
 import { Symptom } from './Symptom';
+import { Fertility } from './Fertility';
+import { Pregnancy } from './Pregnancy';
+import { Health } from './Health';
+import { Documents } from './Documents';
+import { Journal } from './Journal';
+import { AIAssistant } from './AIAssistant';
+import { Appointments } from './Appointments';
+import { Medications } from './Medications';
+import { Settings as SettingsView } from './Settings';
 
 type ViewKey =
   | 'dashboard' | 'cycle' | 'symptoms' | 'fertility' | 'pregnancy'
@@ -34,7 +43,7 @@ export function AppShell() {
     { key: 'ai', label: t('app.ai'), icon: Bot },
     { key: 'appointments', label: t('app.appointments'), icon: CalendarClock },
     { key: 'medications', label: t('app.medications'), icon: Pill },
-    { key: 'settings', label: t('app.settings'), icon: Settings },
+    { key: 'settings', label: t('app.settings'), icon: SettingsIcon },
   ];
 
   const initials = (profile?.first_name?.[0] ?? profile?.email?.[0] ?? 'M').toUpperCase();
@@ -134,7 +143,16 @@ export function AppShell() {
             {view === 'dashboard' && <Dashboard />}
             {view === 'cycle' && <Cycle />}
             {view === 'symptoms' && <Symptom />}
-            {view !== 'dashboard' && view !== 'cycle' && view !== 'symptoms' && (
+            {view === 'fertility' && <Fertility />}
+            {view === 'pregnancy' && <Pregnancy />}
+            {view === 'health' && <Health />}
+            {view === 'documents' && <Documents />}
+            {view === 'journal' && <Journal />}
+            {view === 'ai' && <AIAssistant />}
+            {view === 'appointments' && <Appointments />}
+            {view === 'medications' && <Medications />}
+            {view === 'settings' && <SettingsView />}
+            {view !== 'dashboard' && view !== 'cycle' && view !== 'symptoms' && view !== 'fertility' && view !== 'pregnancy' && view !== 'health' && view !== 'documents' && view !== 'journal' && view !== 'ai' && view !== 'appointments' && view !== 'medications' && view !== 'settings' && (
               <div className="card flex min-h-[50vh] flex-col items-center justify-center gap-3 p-10 text-center">
                 <div className="grid h-14 w-14 place-items-center rounded-2xl bg-aubergine-50 text-aubergine-600 dark:bg-white/5 dark:text-sable-100">
                   {nav.find((n) => n.key === view)?.icon ? (() => { const Icon = nav.find((n) => n.key === view)!.icon; return <Icon size={26} />; })() : null}
