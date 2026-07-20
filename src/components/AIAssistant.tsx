@@ -94,9 +94,22 @@ export function AIAssistant() {
     const newMessages = [...conv.messages, userMsg];
     setActive({ ...conv, messages: newMessages });
 
-    // Simulated AI response (local, no external API — guardrail enforced).
-    await new Promise((r) => setTimeout(r, 600));
-    const response = generateLocalResponse(question);
+    // Call AI edge function (falls back to local if no API key configured).
+    let response: string;
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
+      const resp = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ messages: [...newMessages], lang }),
+      });
+      if (!resp.ok) throw new Error('AI request failed');
+      const data = await resp.json();
+      response = data.content || generateLocalResponse(question);
+    } catch {
+      await new Promise((r) => setTimeout(r, 600));
+      response = generateLocalResponse(question);
+    }
     const assistantMsg: Message = { role: 'assistant', content: response };
     const finalMessages = [...newMessages, assistantMsg];
 
