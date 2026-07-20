@@ -44,32 +44,20 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { messages, lang = "fr" } = await req.json();
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
-
-    if (!apiKey) {
-      const lastUserMsg = [...messages].reverse().find((m: ChatMessage) => m.role === "user");
-      const response = lastUserMsg ? localResponse(lastUserMsg.content, lang) : localResponse("", lang);
-      return new Response(
-        JSON.stringify({ content: response, provider: "local" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const systemPrompt = lang === "fr" ? SYSTEM_PROMPT_FR : SYSTEM_PROMPT_EN;
-    const payload = {
-      model: "gpt-4o-mini",
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
-      max_tokens: 500,
-      temperature: 0.7,
-    };
+    const fullMessages = [{ role: "system", content: systemPrompt }, ...messages];
 
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Pollinations AI — completely free, no API key required
+    // OpenAI-compatible POST endpoint
+    const resp = await fetch("https://text.pollinations.ai/openai", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "openai",
+        messages: fullMessages,
+        max_tokens: 500,
+        temperature: 0.7,
+      }),
     });
 
     if (!resp.ok) {
@@ -85,7 +73,7 @@ Deno.serve(async (req: Request) => {
     const content = data.choices?.[0]?.message?.content ?? localResponse("", lang);
 
     return new Response(
-      JSON.stringify({ content, provider: "openai" }),
+      JSON.stringify({ content, provider: "pollinations" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
