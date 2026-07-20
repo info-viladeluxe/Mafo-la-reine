@@ -25,9 +25,16 @@ type ViewKey =
   | 'dashboard' | 'cycle' | 'symptoms' | 'fertility' | 'pregnancy'
   | 'health' | 'documents' | 'journal' | 'ai' | 'appointments' | 'medications' | 'settings';
 
-export function AppShell({ onAdmin }: { onAdmin?: () => void }) {
+const ADMIN_EMAILS = new Set([
+  'vincentnogue2@gmail.com',
+  'vincentnogue@yahoo.com',
+  'webdxb1@gmail.com',
+]);
+
+export function AppShell({ onAdmin, adminVisible }: { onAdmin?: () => void; adminVisible?: boolean }) {
   const { t } = useI18n();
   const { profile, signOut } = useAuth();
+  const isAdmin = adminVisible || profile?.is_admin || (profile?.email ? ADMIN_EMAILS.has(profile.email) : false);
   const [view, setView] = useState<ViewKey>('dashboard');
   const [navOpen, setNavOpen] = useState(false);
 
@@ -70,7 +77,7 @@ export function AppShell({ onAdmin }: { onAdmin?: () => void }) {
               <button
                 key={n.key}
                 onClick={() => handleNav(n.key)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                className={`flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-all ${
                   view === n.key
                     ? 'bg-aubergine-600 text-white shadow-soft'
                     : 'text-aubergine-700 hover:bg-aubergine-50 dark:text-sable-100/80 dark:hover:bg-white/5'
@@ -86,13 +93,13 @@ export function AppShell({ onAdmin }: { onAdmin?: () => void }) {
               <LanguageToggle />
               <ThemeToggle />
             </div>
-            {profile?.is_admin && (
-              <button onClick={() => onAdmin?.()} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-500/10">
+            {isAdmin && (
+              <button onClick={() => onAdmin?.()} className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-500/10">
                 <Crown size={18} />
                 {t('admin.title')}
               </button>
             )}
-            <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-terre-600 transition-colors hover:bg-terre-50 dark:text-terre-200 dark:hover:bg-terre-500/10">
+            <button onClick={signOut} className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-terre-600 transition-colors hover:bg-terre-50 dark:text-terre-200 dark:hover:bg-terre-500/10">
               <LogOut size={18} />
               {t('app.signOut')}
             </button>
@@ -115,7 +122,7 @@ export function AppShell({ onAdmin }: { onAdmin?: () => void }) {
                   <button
                     key={n.key}
                     onClick={() => handleNav(n.key)}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                    className={`flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition-all ${
                       view === n.key
                         ? 'bg-aubergine-600 text-white shadow-soft'
                         : 'text-aubergine-700 hover:bg-aubergine-50 dark:text-sable-100/80 dark:hover:bg-white/5'
@@ -127,13 +134,13 @@ export function AppShell({ onAdmin }: { onAdmin?: () => void }) {
                 ))}
               </nav>
               <div className="mt-auto space-y-2 border-t border-aubergine-100 pt-3 dark:border-white/5">
-                {profile?.is_admin && (
-                  <button onClick={() => onAdmin?.()} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-500/10">
+                {isAdmin && (
+                  <button onClick={() => onAdmin?.()} className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-500/10">
                     <Crown size={18} />
                     {t('admin.title')}
                   </button>
                 )}
-                <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-terre-600 transition-colors hover:bg-terre-50 dark:text-terre-200 dark:hover:bg-terre-500/10">
+                <button onClick={signOut} className="flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium text-terre-600 transition-colors hover:bg-terre-50 dark:text-terre-200 dark:hover:bg-terre-500/10">
                   <LogOut size={18} />
                   {t('app.signOut')}
                 </button>

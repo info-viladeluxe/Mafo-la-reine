@@ -11,6 +11,12 @@ import { SubscriptionGate } from './components/SubscriptionGate';
 import { SuperAdmin } from './components/SuperAdmin';
 import { Logo } from './components/Logo';
 
+const ADMIN_EMAILS = new Set([
+  'vincentnogue2@gmail.com',
+  'vincentnogue@yahoo.com',
+  'webdxb1@gmail.com',
+]);
+
 type Route = 'landing' | 'auth';
 
 function Router() {
@@ -18,6 +24,7 @@ function Router() {
   const { subscription, loading: subLoading, hasAccess } = useSubscription();
   const [route, setRoute] = useState<Route>('landing');
   const [adminMode, setAdminMode] = useState(false);
+  const isAdmin = profile?.is_admin || (profile?.email ? ADMIN_EMAILS.has(profile.email) : false);
 
   if (loading || (session && subLoading)) {
     return (
@@ -34,11 +41,11 @@ function Router() {
 
   // Authenticated path
   if (session) {
-    if (adminMode && profile?.is_admin) return <SuperAdmin onExit={() => setAdminMode(false)} />;
+    if (adminMode && isAdmin) return <SuperAdmin onExit={() => setAdminMode(false)} />;
     if (!profile?.onboarding_completed) return <Onboarding />;
     if (!hasAccess && subscription !== null) return <SubscriptionGate />;
     if (!hasAccess) return <SubscriptionGate />;
-    return <AppShell onAdmin={() => setAdminMode(true)} />;
+    return <AppShell onAdmin={() => setAdminMode(true)} adminVisible={isAdmin} />;
   }
 
 

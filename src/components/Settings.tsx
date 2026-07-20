@@ -67,7 +67,7 @@ export function Settings() {
         <div className="flex flex-wrap items-center gap-4">
           <LanguageToggle />
           <div className="flex items-center gap-2">
-            <button onClick={toggle} className="flex items-center gap-2 rounded-xl border border-aubergine-200 px-4 py-2.5 text-sm text-aubergine-700 transition-colors hover:border-rose-400 dark:border-white/10 dark:text-sable-100">
+            <button onClick={toggle} className="btn-outline px-4 py-2.5 text-sm">
               <Moon size={16} /> {theme === 'light' ? 'Light' : 'Dark'}
             </button>
           </div>
