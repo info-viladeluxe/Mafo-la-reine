@@ -1,3 +1,5 @@
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
+
 export type BillingCycle = 'monthly' | 'yearly';
 export type PlanId = 'premium' | 'family' | 'premium_plus';
 export type ProviderId = 'stripe' | 'flutterwave';
@@ -95,11 +97,11 @@ class StripeProvider implements PaymentProvider {
   available = false;
 
   async createCheckout(params: CheckoutParams): Promise<CheckoutResult> {
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         plan_id: params.plan.id,
@@ -125,11 +127,11 @@ class FlutterwaveProvider implements PaymentProvider {
   available = false;
 
   async createCheckout(params: CheckoutParams): Promise<CheckoutResult> {
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flutterwave-checkout`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/flutterwave-checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         plan_id: params.plan.id,
