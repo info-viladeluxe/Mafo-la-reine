@@ -9,6 +9,7 @@ import { Onboarding } from './components/Onboarding';
 import { AppShell } from './components/AppShell';
 import { SubscriptionGate } from './components/SubscriptionGate';
 import { SuperAdmin } from './components/SuperAdmin';
+import { LegalPageView, type LegalPage } from './components/LegalPageView';
 import { Logo } from './components/Logo';
 
 const ADMIN_EMAILS = new Set([
@@ -17,12 +18,13 @@ const ADMIN_EMAILS = new Set([
   'webdxb1@gmail.com',
 ]);
 
-type Route = 'landing' | 'auth';
+type Route = 'landing' | 'auth' | 'legal';
 
 function Router() {
   const { session, profile, loading } = useAuth();
   const { subscription, loading: subLoading, hasAccess } = useSubscription();
   const [route, setRoute] = useState<Route>('landing');
+  const [legalPage, setLegalPage] = useState<LegalPage>('terms');
   const [adminMode, setAdminMode] = useState(false);
   const isAdmin = profile?.is_admin || (profile?.email ? ADMIN_EMAILS.has(profile.email) : false);
 
@@ -39,7 +41,10 @@ function Router() {
     );
   }
 
-  // Authenticated path
+  if (route === 'legal') {
+    return <LegalPageView page={legalPage} onBack={() => setRoute('landing')} />;
+  }
+
   if (session) {
     if (adminMode && isAdmin) return <SuperAdmin onExit={() => setAdminMode(false)} />;
     if (!profile?.onboarding_completed) return <Onboarding />;
@@ -48,11 +53,13 @@ function Router() {
     return <AppShell onAdmin={() => setAdminMode(true)} adminVisible={isAdmin} />;
   }
 
-
-
-  // Public path
   if (route === 'auth') return <AuthPage onBack={() => setRoute('landing')} />;
-  return <LandingPage onAuth={() => setRoute('auth')} />;
+  return (
+    <LandingPage
+      onAuth={() => setRoute('auth')}
+      onLegalClick={(p) => { setLegalPage(p); setRoute('legal'); }}
+    />
+  );
 }
 
 export default function App() {

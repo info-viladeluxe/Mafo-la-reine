@@ -1,0 +1,33 @@
+{
+  "name": "Mafo — Health Workspace féminin",
+  "short_name": "Mafo",
+  "description": "Cycle, fertilité, grossesse, santé et bien-être. Pensé pour l'Afrique, par LIYAH GROUP.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FBF6EE",
+  "theme_color": "#5C2A4D",
+  "scope": "/",
+  "lang": "fr",
+  "categories": ["health", "medical", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

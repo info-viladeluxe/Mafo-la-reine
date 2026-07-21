@@ -9,8 +9,9 @@ import { About } from './About';
 import { FAQ } from './FAQ';
 import { FinalCTA } from './FinalCTA';
 import { Footer } from './Footer';
+import type { LegalPage } from './LegalPageView';
 
-export function LandingPage({ onAuth }: { onAuth: () => void }) {
+export function LandingPage({ onAuth, onLegalClick }: { onAuth: () => void; onLegalClick?: (page: LegalPage) => void }) {
   return (
     <div className="min-h-screen bg-sable-100 dark:bg-indigo-400">
       <Header onAuth={onAuth} />
@@ -25,7 +26,7 @@ export function LandingPage({ onAuth }: { onAuth: () => void }) {
         <FAQ />
         <FinalCTA onAuth={onAuth} />
       </main>
-      <Footer />
+      <Footer onLegalClick={onLegalClick} />
     </div>
   );
 }
