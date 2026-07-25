@@ -119,9 +119,19 @@ export function Onboarding() {
       onboarding_completed: true,
       lang,
     };
-    const { error: err } = await updateProfile(patch as never);
-    setBusy(false);
-    if (err) setError(err);
+    // FIX: on protège l'appel réseau avec try/catch/finally.
+    // Avant, si updateProfile rejetait/throwait (erreur réseau, exception),
+    // setBusy(false) n'était jamais exécuté : le bouton "Terminer" restait
+    // bloqué en état "chargement" indéfiniment et l'utilisateur semblait
+    // coincé sur la dernière étape de l'onboarding.
+    try {
+      const { error: err } = await updateProfile(patch as never);
+      if (err) setError(err);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('onb.genericError'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const next = () => setStep((s) => Math.min(s + 1, totalSteps - 1));
@@ -185,6 +195,7 @@ export function Onboarding() {
                   return (
                     <button
                       key={g.id}
+                      type="button"
                       onClick={() => setGoal(g.id)}
                       className={`flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-all ${
                         active
@@ -217,8 +228,9 @@ export function Onboarding() {
                   value={lastPeriod}
                   onChange={(e) => { setLastPeriod(e.target.value); setSkipPeriod(false); }}
                   max={new Date().toISOString().slice(0, 10)}
+                  disabled={skipPeriod}
                   className={`w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm text-aubergine-900 outline-none transition-all focus:border-ocre-400 focus:ring-2 focus:ring-ocre-200 dark:bg-indigo-200 dark:text-sable-100 ${
-                    skipPeriod ? 'opacity-50 border-aubergine-100 dark:border-white/10' : 'border-aubergine-200 dark:border-white/10'
+                    skipPeriod ? 'opacity-50 border-aubergine-100 dark:border-white/10 cursor-not-allowed' : 'border-aubergine-200 dark:border-white/10'
                   }`}
                 />
               </div>
@@ -309,6 +321,7 @@ export function Onboarding() {
           {/* Nav */}
           <div className="mt-7 flex items-center justify-between">
             <button
+              type="button"
               onClick={back}
               disabled={step === 0 || busy}
               className="btn-ghost text-sm disabled:opacity-40"
@@ -316,11 +329,11 @@ export function Onboarding() {
               <ArrowLeft size={16} /> {t('onb.back')}
             </button>
             {step < totalSteps - 1 ? (
-              <button onClick={next} disabled={!canNext()} className="btn-primary px-5 py-2.5 text-sm">
+              <button type="button" onClick={next} disabled={!canNext()} className="btn-primary px-5 py-2.5 text-sm">
                 {t('onb.next')} <ArrowRight size={16} />
               </button>
             ) : (
-              <button onClick={finish} disabled={busy || !canNext()} className="btn-ocre px-5 py-2.5 text-sm">
+              <button type="button" onClick={finish} disabled={busy || !canNext()} className="btn-ocre px-5 py-2.5 text-sm">
                 {busy ? null : <Check size={16} />}
                 {t('onb.finish')}
               </button>
