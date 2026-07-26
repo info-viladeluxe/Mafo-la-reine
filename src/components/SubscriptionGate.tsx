@@ -34,7 +34,19 @@ export function SubscriptionGate() {
         return;
       }
       // No payment provider configured yet — start a local trial.
-      await startTrial(planId, cycle);
+      // FIX: on vérifie désormais l'erreur retournée par startTrial().
+      // Avant, l'erreur était ignorée et window.location.reload() s'exécutait
+      // quand même, même en cas d'échec de l'insertion en base (ex: policy
+      // RLS manquante sur la table `subscriptions`). Résultat : l'utilisateur
+      // rechargeait la page, retombait directement sur ce même écran
+      // (puisque l'abonnement n'avait jamais été créé), sans aucun message
+      // d'erreur — une boucle silencieuse qui donnait l'impression que
+      // "rien n'avance".
+      const { error: trialError } = await startTrial(planId, cycle);
+      if (trialError) {
+        setError(trialError);
+        return;
+      }
       window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Checkout error');
