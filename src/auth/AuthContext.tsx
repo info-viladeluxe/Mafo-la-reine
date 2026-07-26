@@ -103,14 +103,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (patch: Partial<Profile>) => {
     const uid = session?.user?.id;
     if (!uid) return { error: 'No session' };
+
+    // FIX: on utilise upsert() au lieu de update().
+    // Avant, si la ligne `profiles` de cet utilisateur n'existait pas encore
+    // (ex: l'insert lors du signUp avait échoué silencieusement, ou une
+    // condition de course entre signUp et l'insert), .update() ne trouvait
+    // aucune ligne à modifier. Cela ne renvoyait AUCUNE erreur (ce n'est pas
+    // une erreur PostgreSQL de ne matcher aucune ligne), mais `data` restait
+    // `null`, donc `setProfile` n'était jamais appelé. Résultat : l'état
+    // local `profile` ne se mettait jamais à jour, l'app pensait que
+    // l'onboarding n'était toujours pas terminé, et l'écran restait bloqué
+    // sur la dernière étape sans aucun message d'erreur visible.
+    // upsert() garantit que la ligne est créée si elle manque, ou mise à
+    // jour si elle existe déjà.
     const { data, error } = await supabase
       .from('profiles')
-      .update({ ...patch, updated_at: new Date().toISOString() })
-      .eq('id', uid)
+      .upsert(
+        { id: uid, ...patch, updated_at: new Date().toISOString() },
+        { onConflict: 'id' },
+      )
       .select('*')
       .maybeSingle();
+
     if (error) return { error: error.message };
-    if (data) setProfile(data as Profile);
+    if (data) {
+      setProfile(data as Profile);
+    } else {
+      // Filet de sécurité : si pour une raison quelconque .select() ne
+      // renvoie rien après l'upsert, on force un rechargement du profil
+      // pour ne jamais rester bloqué silencieusement.
+      await loadProfile(uid);
+    }
     return { error: null };
   };
 
