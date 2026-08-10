@@ -30,8 +30,6 @@ interface SubContextValue {
 
 const SubContext = createContext<SubContextValue | null>(null);
 
-const TRIAL_DAYS = 3;
-
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -80,23 +78,18 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const startTrial = async (planId: PlanId, cycle: BillingCycle) => {
     if (!user) return { error: 'No session' };
-    const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_DAYS);
 
+    // Call the server-side start_trial RPC. It enforces "one trial per user
+    // ever" and is the only way a non-admin can create a subscription row
+    // (direct INSERT is blocked by RLS — see migration
+    // 20260809120000_secure_subscription_gate.sql).
     const { data, error } = await supabase
-      .from('subscriptions')
-      .insert({
-        user_id: user.id,
-        plan_id: planId,
-        cycle,
-        status: 'trialing',
-        trial_ends_at: trialEndsAt.toISOString(),
-      })
-      .select('*')
-      .maybeSingle();
+      .rpc('start_trial', { p_plan: planId, p_cycle: cycle });
 
     if (error) return { error: error.message };
-    if (data) setSubscription(data as Subscription);
+    const result = (data ?? {}) as { error?: string; data?: Subscription };
+    if (result.error) return { error: result.error };
+    if (result.data) setSubscription(result.data);
     return { error: null };
   };
 

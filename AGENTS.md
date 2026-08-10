@@ -33,6 +33,21 @@ See `.env.example`. Frontend vars: `VITE_*`. Edge function secrets: `STRIPE_SECR
 - `subscriptions` has a **unique constraint on `user_id`** (`idx_subscriptions_user_unique`) so checkout/webhooks can `upsert(..., { onConflict: 'user_id' })`.
 - Migration `20260809100000_psp_subscription_sync.sql` adds the column, constraint, trigger, and functions (idempotent).
 
+## Subscription gate — server-side enforcement (security critical)
+Migration `20260809120000_secure_subscription_gate.sql` makes the paywall enforceable server-side, not just in the React frontend:
+
+- **`private.is_subscribed()`** — returns true when `auth.uid()` has a subscription with `status IN ('active','trialing','past_due')` AND `trial_ends_at`/`current_period_end` (if set) are still in the future. All feature-data RLS policies (`cycle_entries`, `symptom_entries`, `journal_entries`, `medications`, `appointments`, `documents`, `ai_conversations`, `health_records`, `pregnancy_entries`) append `AND private.is_subscribed()` to SELECT/INSERT/UPDATE/DELETE — so an expired user gets **zero rows** and cannot write, even via direct REST API calls.
+- **`subscriptions` is locked down** — users can only SELECT their own row; INSERT/UPDATE/DELETE are **admin-only** (`is_admin` check). Webhooks use the service_role key and bypass RLS, so PSP activation is unaffected. This blocks self-granting `status='active'` and the delete+re-trial loop.
+- **`public.start_trial(p_plan, p_cycle)`** — SECURITY DEFINER RPC, the ONLY way a non-admin creates a subscription. Enforces **one trial per user ever** (rejects if any row exists). Frontend `SubscriptionContext.startTrial` calls this via `supabase.rpc('start_trial', ...)`. The RPC's 3-day trial length is hardcoded server-side.
+- **`profiles` privileged columns protected** — a BEFORE UPDATE trigger (`private.guard_privileged_profile_columns()`) blocks non-admins from changing `is_admin` or `subscription_plan` (self-promotion / plan inflation). The internal sync trigger sets `app.mafo_system_sync` so its own updates are exempted. Admins can still update any profile.
+
+**Never** add a feature-data table without gating it with `private.is_subscribed()`. **Never** give users direct INSERT/UPDATE/DELETE on `subscriptions` or on `profiles.is_admin`/`subscription_plan`.
+
+## Supabase auto-pause prevention
+Free-tier Supabase projects pause after 7 days of inactivity. A daily keepalive pings the DB:
+- `supabase/functions/keepalive/index.ts` — edge function doing a trivial `head: true` SELECT (service_role).
+- `.github/workflows/keepalive.yml` — GitHub Actions cron (08:17 UTC daily) that POSTs to the function. Requires `SUPABASE_URL` (or `VITE_SUPABASE_URL`) and `SUPABASE_ANON_KEY` (or `VITE_SUPABASE_ANON_KEY`) repo secrets. For production reliability, upgrade the Supabase project to the Pro plan (no auto-pause).
+
 ## Conventions
 - Profile `subscription_plan` valid values: `'free' | 'premium' | 'family' | 'premium_plus' | null` (NOT 'pro' — legacy).
 - Edge functions use `createClient` with `SUPABASE_SERVICE_ROLE_KEY` for DB writes that bypass RLS (webhooks); anon key + `auth.getUser` for user-scoped checkout.
