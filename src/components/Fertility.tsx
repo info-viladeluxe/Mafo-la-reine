@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, Calendar, TrendingUp, Info, Baby, ShieldCheck } from 'lucide-react';
+import { Sparkles, TrendingUp, Info, Baby, ShieldCheck } from 'lucide-react';
 import { useI18n } from '../i18n/I18nContext';
 import { useCycleState } from '../lib/cycle';
 

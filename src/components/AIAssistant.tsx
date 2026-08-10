@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bot, Send, Loader2, Sparkles, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { Bot, Send, Loader2, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';

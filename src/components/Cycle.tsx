@@ -106,7 +106,6 @@ export function Cycle() {
     ? Math.round(cycleLengths.reduce((s, c) => s + c.length, 0) / cycleLengths.length)
     : cycleState?.cycleLength ?? 28;
   const avgPeriod = cycleState?.periodLength ?? 5;
-  const lastEntry = entries[0];
 
   // Trend chart bounds
   const trendMax = Math.max(35, ...cycleLengths.map((c) => c.length));

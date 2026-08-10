@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Star, Zap } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
 import { useI18n } from '../i18n/I18nContext';
 import { Reveal } from './Reveal';
 import { PLANS, planPrice, yearlySavings, type BillingCycle } from '../lib/payments';

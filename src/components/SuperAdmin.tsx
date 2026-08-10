@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Users, Crown, TrendingUp, Activity, Search, Shield, ArrowLeft, Loader2, Globe,
-  HeartPulse, Plus, Trash2, Edit3, X, Gift, Tag, UserCog, ScrollText, Bot, Sparkles,
-  LogIn, LogOut, ChevronRight, BarChart3, DollarSign, AlertTriangle, Check, Copy,
+  Plus, Trash2, Edit3, X, Gift, Tag, UserCog, ScrollText, Bot, Sparkles,
+  LogIn, LogOut, ChevronRight, BarChart3, DollarSign, Check, Copy,
 } from 'lucide-react';
 import { supabase, type Profile } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
@@ -212,11 +212,11 @@ export function SuperAdmin({ onExit }: { onExit: () => void }) {
 
 /* ── Overview Tab ─────────────────────────────────────────────────────────── */
 
-function OverviewTab({ users, activity, codes, audit, lang, t }: {
+function OverviewTab({ users, activity, codes, audit: _audit, lang, t }: {
   users: Profile[]; activity: ActivityLog[]; codes: CommercialCode[]; audit: AuditEntry[]; lang: 'fr' | 'en'; t: (k: TranslationKey, v?: Record<string, string | number>) => string;
 }) {
   const totalUsers = users.length;
-  const premiumUsers = users.filter((u) => u.subscription_plan === 'premium' || u.subscription_plan === 'pro').length;
+  const premiumUsers = users.filter((u) => u.subscription_plan === 'premium' || u.subscription_plan === 'family' || u.subscription_plan === 'premium_plus').length;
   const activeUsers = users.filter((u) => u.onboarding_completed).length;
   const today = new Date().toDateString();
   const enteredToday = activity.filter((a) => a.event_type === 'login' && new Date(a.created_at).toDateString() === today).length;
@@ -383,7 +383,8 @@ function UsersTab({ users, roles, userRoles, lang, t, logAudit, onReload }: {
   const PLAN_COLORS: Record<string, string> = {
     free: 'bg-neutral-100 text-neutral dark:bg-white/5',
     premium: 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-200',
-    pro: 'bg-aubergine-50 text-aubergine-600 dark:bg-white/5 dark:text-sable-100/80',
+    family: 'bg-ocre-50 text-ocre-600 dark:bg-ocre-400/15 dark:text-ocre-200',
+    premium_plus: 'bg-aubergine-50 text-aubergine-600 dark:bg-white/5 dark:text-sable-100/80',
   };
 
   return (
@@ -428,7 +429,8 @@ function UsersTab({ users, roles, userRoles, lang, t, logAudit, onReload }: {
                     >
                       <option value="free">{t('admin.plans.free')}</option>
                       <option value="premium">{t('admin.plans.premium')}</option>
-                      <option value="pro">{t('admin.plans.pro')}</option>
+                      <option value="family">{t('admin.plans.family')}</option>
+                      <option value="premium_plus">{t('admin.plans.premium_plus')}</option>
                     </select>
                   </td>
                   <td className="px-5 py-3 text-xs text-neutral">{u.created_at ? fmtDate(u.created_at, lang) : '—'}</td>
@@ -655,7 +657,7 @@ function CodesTab({ codes, users, lang, t, logAudit, onReload }: {
 
 /* ── Subscriptions Tab ────────────────────────────────────────────────────── */
 
-function SubscriptionsTab({ users, lang, t, logAudit, onReload }: {
+function SubscriptionsTab({ users, lang: _lang, t, logAudit, onReload }: {
   users: Profile[]; lang: 'fr' | 'en'; t: (k: TranslationKey, v?: Record<string, string | number>) => string;
   logAudit: (a: string, uid?: string, res?: string, d?: Record<string, unknown>) => Promise<void>; onReload: () => Promise<void>;
 }) {
@@ -702,14 +704,15 @@ function SubscriptionsTab({ users, lang, t, logAudit, onReload }: {
   const PLAN_COLORS: Record<string, string> = {
     free: 'bg-neutral-100 text-neutral dark:bg-white/5',
     premium: 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-200',
-    pro: 'bg-aubergine-50 text-aubergine-600 dark:bg-white/5 dark:text-sable-100/80',
+    family: 'bg-ocre-50 text-ocre-600 dark:bg-ocre-400/15 dark:text-ocre-200',
+    premium_plus: 'bg-aubergine-50 text-aubergine-600 dark:bg-white/5 dark:text-sable-100/80',
   };
 
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard icon={Crown} label={t('admin.subStats.premium')} value={subUsers.filter((u) => u.subscription_plan === 'premium').length} color="#F0509C" />
-        <StatCard icon={Sparkles} label={t('admin.subStats.pro')} value={subUsers.filter((u) => u.subscription_plan === 'pro').length} color="#5C2A4D" />
+        <StatCard icon={Sparkles} label={t('admin.subStats.pro')} value={subUsers.filter((u) => u.subscription_plan === 'premium_plus').length} color="#5C2A4D" />
         <StatCard icon={Gift} label={t('admin.subStats.free')} value={users.length - subUsers.length} color="#8A7E74" />
       </div>
 
@@ -743,7 +746,8 @@ function SubscriptionsTab({ users, lang, t, logAudit, onReload }: {
                       className={`chip cursor-pointer border-0 px-2 py-0.5 text-[10px] outline-none ${PLAN_COLORS[u.subscription_plan ?? 'free'] ?? PLAN_COLORS.free}`}>
                       <option value="free">{t('admin.plans.free')}</option>
                       <option value="premium">{t('admin.plans.premium')}</option>
-                      <option value="pro">{t('admin.plans.pro')}</option>
+                      <option value="family">{t('admin.plans.family')}</option>
+                      <option value="premium_plus">{t('admin.plans.premium_plus')}</option>
                     </select>
                   </td>
                   <td className="px-5 py-3">
@@ -777,7 +781,7 @@ function AITab({ users, lang, t }: { users: Profile[]; lang: 'fr' | 'en'; t: (k:
   const generateInsight = async () => {
     setLoading(true);
     const total = users.length;
-    const premium = users.filter((u) => u.subscription_plan === 'premium' || u.subscription_plan === 'pro').length;
+    const premium = users.filter((u) => u.subscription_plan === 'premium' || u.subscription_plan === 'family' || u.subscription_plan === 'premium_plus').length;
     const active = users.filter((u) => u.onboarding_completed).length;
     const countries = new Set(users.map((u) => u.country).filter(Boolean)).size;
     const conversionRate = total > 0 ? ((premium / total) * 100).toFixed(1) : '0';

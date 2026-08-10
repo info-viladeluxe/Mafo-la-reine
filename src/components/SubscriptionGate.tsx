@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Lock, Sparkles, Check, Loader2, CreditCard, Zap } from 'lucide-react';
+import { Lock, Sparkles, Check, Loader2, CreditCard, Zap, Smartphone } from 'lucide-react';
 import { useSubscription, type PlanId, type BillingCycle } from '../auth/SubscriptionContext';
 import { useI18n } from '../i18n/I18nContext';
-import { PLANS, planPrice, yearlySavings, startCheckout, availableProviders } from '../lib/payments';
+import { PLANS, planPrice, yearlySavings, startCheckout, availableProviders, type ProviderId } from '../lib/payments';
 import { useAuth } from '../auth/AuthContext';
 
 export function SubscriptionGate() {
@@ -12,18 +12,22 @@ export function SubscriptionGate() {
   const [cycle, setCycle] = useState<BillingCycle>('yearly');
   const [busy, setBusy] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<ProviderId>(() => {
+    const avail = availableProviders().filter((p) => p.available);
+    return avail[0]?.id ?? 'flutterwave';
+  });
 
   const trialEnded = subscription && subscription.status === 'trialing' && (daysLeftInTrial ?? 0) <= 0;
-  const noSub = !subscription;
+  const providers = availableProviders();
+  const availableOnly = providers.filter((p) => p.available);
 
   const handleStart = async (planId: PlanId) => {
     setError(null);
     setBusy(planId);
     try {
       const plan = PLANS.find((p) => p.id === planId)!;
-      const providers = availableProviders().filter((p) => p.available);
-      if (providers.length > 0 && user) {
-        const result = await startCheckout(providers[0].id, {
+      if (availableOnly.length > 0 && user) {
+        const result = await startCheckout(provider, {
           plan,
           cycle,
           email: user.email ?? '',
@@ -34,14 +38,6 @@ export function SubscriptionGate() {
         return;
       }
       // No payment provider configured yet — start a local trial.
-      // FIX: on vérifie désormais l'erreur retournée par startTrial().
-      // Avant, l'erreur était ignorée et window.location.reload() s'exécutait
-      // quand même, même en cas d'échec de l'insertion en base (ex: policy
-      // RLS manquante sur la table `subscriptions`). Résultat : l'utilisateur
-      // rechargeait la page, retombait directement sur ce même écran
-      // (puisque l'abonnement n'avait jamais été créé), sans aucun message
-      // d'erreur — une boucle silencieuse qui donnait l'impression que
-      // "rien n'avance".
       const { error: trialError } = await startTrial(planId, cycle);
       if (trialError) {
         setError(trialError);
@@ -54,6 +50,10 @@ export function SubscriptionGate() {
       setBusy(null);
     }
   };
+
+  const currentPlan = subscription
+    ? PLANS.find((p) => p.id === subscription.plan_id) ?? null
+    : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-sable-100 dark:bg-indigo-400">
@@ -101,6 +101,51 @@ export function SubscriptionGate() {
             ))}
           </div>
         </div>
+
+        {/* Current subscription banner */}
+        {currentPlan && (
+          <div className="mx-auto mt-6 max-w-md rounded-2xl border border-emeraude-200 bg-emeraude-50/70 px-4 py-3 text-center text-sm dark:border-emeraude-700/30 dark:bg-emeraude-700/10">
+            <span className="font-medium text-emeraude-700 dark:text-emeraude-200">
+              {t('gate.currentPlan')}:
+            </span>{' '}
+            <span className="font-semibold text-aubergine-700 dark:text-sable-100">
+              {t(currentPlan.nameKey as never)}
+            </span>
+            {subscription?.status === 'trialing' && (
+              <span className="ml-2 rounded-full bg-emeraude-100 px-2 py-0.5 text-xs font-medium text-emeraude-700 dark:bg-emeraude-700/30 dark:text-emeraude-200">
+                {t('gate.statusTrialing')}
+              </span>
+            )}
+            {subscription?.status === 'active' && (
+              <span className="ml-2 rounded-full bg-emeraude-100 px-2 py-0.5 text-xs font-medium text-emeraude-700 dark:bg-emeraude-700/30 dark:text-emeraude-200">
+                {t('gate.statusActive')}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Provider selection */}
+        {availableOnly.length > 0 && (
+          <div className="mx-auto mt-6 max-w-md">
+            <p className="mb-2 text-center text-xs font-medium text-neutral">{t('gate.chooseProvider')}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {availableOnly.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setProvider(p.id)}
+                  className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all ${
+                    provider === p.id
+                      ? 'border-aubergine-600 bg-aubergine-600 text-white shadow-soft'
+                      : 'border-aubergine-200 bg-white/60 text-aubergine-700 hover:border-aubergine-400 dark:border-white/10 dark:bg-white/5 dark:text-sable-100'
+                  }`}
+                >
+                  {p.id === 'stripe' ? <CreditCard size={16} /> : <Smartphone size={16} />}
+                  {p.id === 'stripe' ? t('gate.providerStripe') : t('gate.providerFlutterwave')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mx-auto mt-6 max-w-md animate-fade-in rounded-xl bg-terre-50 px-4 py-3 text-center text-sm text-terre-600 dark:bg-terre-500/15 dark:text-terre-200">
@@ -175,7 +220,9 @@ export function SubscriptionGate() {
                   }`}
                 >
                   {busy === plan.id ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-                  {t('pricing.ctaTrial')}
+                  {availableOnly.length > 0
+                    ? t('gate.payWith', { provider: provider === 'stripe' ? 'Stripe' : 'Flutterwave' })
+                    : t('gate.startTrialLocal')}
                 </button>
               </div>
             );

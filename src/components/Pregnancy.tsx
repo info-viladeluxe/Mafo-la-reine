@@ -82,7 +82,7 @@ export function Pregnancy() {
     const week = lmp ? Math.min(42, Math.floor((Date.now() - new Date(lmp).getTime()) / (7 * 86400000))) : 0;
     const initChecklist: Record<string, boolean> = {};
     DEFAULT_CHECKLIST.forEach((item) => { initChecklist[item] = false; });
-    const { data, error: err } = await supabase.from('pregnancy_entries').insert({
+    const { error: err } = await supabase.from('pregnancy_entries').insert({
       is_active: true, lmp_date: lmp || null, due_date: dueDate,
       current_week: week, current_weight_kg: weight ? parseFloat(weight) : null,
       checklist: initChecklist,

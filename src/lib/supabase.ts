@@ -30,7 +30,7 @@ export interface Profile {
   period_length_avg: number | null;
   onboarding_completed: boolean;
   is_admin: boolean;
-  subscription_plan: 'free' | 'premium' | 'pro' | null;
+  subscription_plan: 'free' | 'premium' | 'family' | 'premium_plus' | null;
   created_at: string;
   updated_at: string;
 }

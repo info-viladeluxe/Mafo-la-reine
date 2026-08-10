@@ -47,8 +47,9 @@ Deno.serve(async (req) => {
     let event: Stripe.Event;
     try {
       event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
-    } catch (err: any) {
-      console.error(`Webhook signature verification failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Webhook signature verification failed: ${msg}`);
       return corsResponse({ error: `Webhook signature verification failed` }, 400);
     }
 
@@ -56,14 +57,15 @@ Deno.serve(async (req) => {
     EdgeRuntime.waitUntil(handleEvent(event));
 
     return corsResponse({ received: true }, 200);
-  } catch (error: any) {
-    console.error(`Webhook error: ${error.message}`);
-    return corsResponse({ error: error.message }, 500);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Webhook error: ${message}`);
+    return corsResponse({ error: message }, 500);
   }
 });
 
 async function handleEvent(event: Stripe.Event) {
-  const stripeData = event?.data?.object as any;
+  const stripeData = event?.data?.object as Record<string, unknown>;
 
   if (!stripeData) return;
 
@@ -126,6 +128,86 @@ async function handleOneTimePayment(session: Stripe.Checkout.Session) {
   console.log(`Recorded one-time payment order for session ${checkout_session_id}`);
 }
 
+// Map a Stripe Price ID back to (plan_id, cycle) using env vars, mirroring
+// stripe-checkout's priceIdFor(). Falls back to session metadata if available.
+function planFromPriceId(priceId: string | null | undefined): { plan_id: string | null; cycle: 'monthly' | 'yearly' | null } {
+  if (!priceId) return { plan_id: null, cycle: null };
+  const plans: Array<'premium' | 'family' | 'premium_plus'> = ['premium', 'family', 'premium_plus'];
+  for (const p of plans) {
+    for (const c of ['monthly', 'yearly'] as const) {
+      const envPrice = Deno.env.get(`STRIPE_PRICE_${p.toUpperCase()}_${c.toUpperCase()}`);
+      if (envPrice && envPrice === priceId) return { plan_id: p, cycle: c };
+    }
+  }
+  return { plan_id: null, cycle: null };
+}
+
+// Bridge the Stripe subscription state into the `subscriptions` table that the
+// frontend access gate actually reads. Without this, a successful Stripe payment
+// would update `stripe_subscriptions` but never open the app gate.
+async function syncMafoSubscription(customerId: string, stripeSub: Stripe.Subscription) {
+  const { data: customerRow } = await supabase
+    .from('stripe_customers')
+    .select('user_id')
+    .eq('customer_id', customerId)
+    .maybeSingle();
+
+  const userId = customerRow?.user_id;
+  if (!userId) {
+    console.log(`No user mapped to Stripe customer ${customerId}, skipping Mafo subscription sync`);
+    return;
+  }
+
+  const priceId = stripeSub.items?.data?.[0]?.price?.id ?? null;
+  const { plan_id: envPlan, cycle: envCycle } = planFromPriceId(priceId);
+
+  // Prefer metadata (set at checkout time) when env mapping is missing.
+  const planId = (stripeSub.metadata?.plan_id as string) || envPlan || 'premium';
+  const cycle = (stripeSub.metadata?.cycle as 'monthly' | 'yearly') || envCycle || 'monthly';
+
+  const statusMap: Record<string, string> = {
+    trialing: 'trialing',
+    active: 'active',
+    past_due: 'past_due',
+    unpaid: 'past_due',
+    canceled: 'canceled',
+    incomplete: 'past_due',
+    incomplete_expired: 'expired',
+    paused: 'past_due',
+  };
+  const mafoStatus = statusMap[stripeSub.status] ?? 'past_due';
+
+  const periodEnd = stripeSub.current_period_end
+    ? new Date(stripeSub.current_period_end * 1000).toISOString()
+    : null;
+  const trialEnd = stripeSub.trial_end
+    ? new Date(stripeSub.trial_end * 1000).toISOString()
+    : null;
+
+  const { error } = await supabase.from('subscriptions').upsert(
+    {
+      user_id: userId,
+      plan_id: planId,
+      cycle,
+      provider: 'stripe',
+      status: mafoStatus,
+      current_period_end: periodEnd,
+      trial_ends_at: trialEnd,
+      cancel_at_period_end: stripeSub.cancel_at_period_end ?? false,
+      stripe_customer_id: customerId,
+      stripe_subscription_id: stripeSub.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' },
+  );
+
+  if (error) {
+    console.error('Error syncing Mafo subscription:', error);
+  } else {
+    console.log(`Synced Mafo subscription for user ${userId} (status=${mafoStatus})`);
+  }
+}
+
 async function syncCustomerFromStripe(customerId: string) {
   try {
     const subscriptions = await stripe.subscriptions.list({
@@ -152,6 +234,9 @@ async function syncCustomerFromStripe(customerId: string) {
     }
 
     const subscription = subscriptions.data[0];
+
+    // Bridge into the Mafo `subscriptions` table (read by the access gate).
+    await syncMafoSubscription(customerId, subscription);
 
     const { error: subError } = await supabase.from('stripe_subscriptions').upsert(
       {

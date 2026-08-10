@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, User, Globe, Moon, Shield, Download, Trash2, CreditCard, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, User, Globe, Moon, Shield, Download, Trash2, CreditCard, Loader2, Crown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
+import { useSubscription } from '../auth/SubscriptionContext';
 import { useI18n } from '../i18n/I18nContext';
 import { useTheme } from '../theme/ThemeContext';
 import { LanguageToggle } from './LanguageToggle';
+import { PLANS } from '../lib/payments';
 
 export function Settings() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { profile, user, signOut } = useAuth();
+  const { subscription } = useSubscription();
   const { theme, toggle } = useTheme();
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
   const [busy, setBusy] = useState(false);
@@ -31,6 +34,19 @@ export function Settings() {
     if (!window.confirm(t('settings.confirmDelete'))) return;
     await signOut();
   };
+
+  const fmt = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+  const planLabel = subscription
+    ? (PLANS.find((p) => p.id === subscription.plan_id)?.nameKey ?? null)
+    : null;
+  const statusKey =
+    subscription?.status === 'active' ? 'gate.statusActive'
+      : subscription?.status === 'trialing' ? 'gate.statusTrialing'
+        : subscription?.status === 'canceled' ? 'gate.statusCanceled'
+          : null;
+  const periodKey = subscription?.status === 'trialing' ? 'settings.trialEndsOn' : 'settings.renewsOn';
 
   return (
     <div className="space-y-6">
@@ -79,8 +95,57 @@ export function Settings() {
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-aubergine-700 dark:text-sable-100">
           <CreditCard size={16} className="text-rose-500" /> {t('settings.subscription')}
         </div>
-        <p className="text-sm text-neutral">{t('settings.plan')}: <span className="font-semibold text-aubergine-700 dark:text-sable-100">Premium</span></p>
-        <button className="btn-outline mt-3 px-4 py-2.5 text-sm">{t('settings.managePlan')}</button>
+
+        {subscription && planLabel ? (
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-neutral">{t('settings.plan')}</p>
+                <p className="text-sm font-semibold text-aubergine-700 dark:text-sable-100">{t(planLabel as never)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral">{t('settings.status')}</p>
+                <p className="text-sm font-semibold text-aubergine-700 dark:text-sable-100">
+                  {statusKey ? t(statusKey as never) : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral">{t('settings.billingCycle')}</p>
+                <p className="text-sm capitalize text-aubergine-700 dark:text-sable-100">
+                  {subscription.cycle === 'monthly' ? t('pricing.monthly') : t('pricing.yearly')}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-neutral">{t('settings.provider')}</p>
+                <p className="text-sm capitalize text-aubergine-700 dark:text-sable-100">
+                  {subscription.provider ?? '—'}
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs text-neutral">{t(periodKey as never)}</p>
+                <p className="text-sm font-semibold text-aubergine-700 dark:text-sable-100">
+                  {fmt(subscription.status === 'trialing' ? subscription.trial_ends_at : subscription.current_period_end)}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { window.location.href = '/?upgrade=1'; }}
+              className="btn-outline px-4 py-2.5 text-sm"
+            >
+              <Crown size={16} /> {t('settings.upgrade')}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-neutral">{t('settings.noSubscription')}</p>
+            <button
+              onClick={() => { window.location.href = '/?upgrade=1'; }}
+              className="btn-primary px-4 py-2.5 text-sm"
+            >
+              <Crown size={16} /> {t('settings.upgrade')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Privacy */}

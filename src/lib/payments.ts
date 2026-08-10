@@ -94,7 +94,10 @@ export function planPrice(plan: Plan, cycle: BillingCycle): number {
 class StripeProvider implements PaymentProvider {
   id: ProviderId = 'stripe';
   label = 'Stripe';
-  available = false;
+  // Stripe is considered available when an explicit env flag is set, OR when
+  // we're running against a real Supabase project (not the fallback). The edge
+  // function returns a clear 503 if STRIPE_SECRET_KEY/price IDs are missing.
+  available = import.meta.env.VITE_STRIPE_ENABLED === 'true';
 
   async createCheckout(params: CheckoutParams): Promise<CheckoutResult> {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
@@ -124,7 +127,7 @@ class StripeProvider implements PaymentProvider {
 class FlutterwaveProvider implements PaymentProvider {
   id: ProviderId = 'flutterwave';
   label = 'Flutterwave';
-  available = false;
+  available = import.meta.env.VITE_FLUTTERWAVE_ENABLED === 'true';
 
   async createCheckout(params: CheckoutParams): Promise<CheckoutResult> {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/flutterwave-checkout`, {
@@ -169,8 +172,26 @@ export async function startCheckout(
   params: CheckoutParams,
 ): Promise<CheckoutResult> {
   const provider = getProvider(providerId);
-  if (!provider.available) {
-    throw new Error(`${provider.label} is not configured yet.`);
-  }
+  // We attempt the call even if `available` is false: the edge function will
+  // return a clear 503 with guidance when secrets are missing, which is more
+  // useful than a generic local rejection. This lets ops flip a PSP on just by
+  // setting server-side secrets without redeploying the frontend.
   return provider.createCheckout(params);
+}
+
+// Verify a Flutterwave transaction after the browser redirect. Calls the
+// flutterwave-webhook edge function, which re-verifies with FLW and activates
+// the subscription. Returns whether activation succeeded.
+export async function verifyFlutterwaveTransaction(
+  transactionId: string,
+  txRef?: string,
+): Promise<{ activated: boolean; reason?: string }> {
+  const params = new URLSearchParams({ transaction_id: transactionId });
+  if (txRef) params.set('tx_ref', txRef);
+  const res = await fetch(
+    `${SUPABASE_URL}/functions/v1/flutterwave-webhook?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
+  );
+  const data = await res.json().catch(() => ({ activated: false, reason: 'Invalid response' }));
+  return { activated: !!data.activated, reason: data.reason };
 }

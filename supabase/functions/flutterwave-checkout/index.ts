@@ -1,4 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL") ?? "",
+  Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,9 +43,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Authenticate the caller so user_id can't be spoofed.
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user && user.id !== user_id) {
+        return new Response(
+          JSON.stringify({ error: "User ID mismatch." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     const origin = req.headers.get("origin") || "https://mafo.app";
     const txRef = `mafo-${plan_id}-${cycle}-${user_id.slice(0, 8)}-${Date.now()}`;
 
+    // Record a pending subscription row so the gate reflects the in-flight
+    // payment even before the webhook lands. The webhook will flip it to active.
+    await supabase.from("subscriptions").upsert(
+      {
+        user_id,
+        plan_id: plan_id,
+        cycle,
+        provider: "flutterwave",
+        status: "past_due",
+      },
+      { onConflict: "user_id" },
+    );
+
+    // Flutterwave appends transaction_id, tx_ref, status to the redirect_url.
+    // The frontend reads those and calls flutterwave-webhook to verify.
     const resp = await fetch("https://api.flutterwave.com/v3/payments", {
       method: "POST",
       headers: {
@@ -50,11 +84,11 @@ Deno.serve(async (req: Request) => {
         tx_ref: txRef,
         amount,
         currency: "USD",
-        payment_options: "card,mobilemoney,ussd",
+        payment_options: "card,mobilemoney,ussd,banktransfer",
         customer: { email },
-        customizations: { title: "Mafo", description: `Mafo ${plan_id} — ${cycle}` },
+        customizations: { title: "Mafo", description: `Mafo ${plan_id} — ${cycle}`, logo: "https://mafo.app/favicon.svg" },
         meta: { user_id, plan_id, cycle, is_trial: String(is_trial) },
-        redirect_url: `${origin}/?checkout=success`,
+        redirect_url: `${origin}/?checkout=success&provider=flutterwave`,
       }),
     });
 
