@@ -45,8 +45,8 @@ Migration `20260809120000_secure_subscription_gate.sql` makes the paywall enforc
 
 ## Supabase auto-pause prevention
 Free-tier Supabase projects pause after 7 days of inactivity. A daily keepalive pings the DB:
-- `supabase/functions/keepalive/index.ts` — edge function doing a trivial `head: true` SELECT (service_role).
-- `.github/workflows/keepalive.yml` — GitHub Actions cron (08:17 UTC daily) that POSTs to the function. Requires `SUPABASE_URL` (or `VITE_SUPABASE_URL`) and `SUPABASE_ANON_KEY` (or `VITE_SUPABASE_ANON_KEY`) repo secrets. For production reliability, upgrade the Supabase project to the Pro plan (no auto-pause).
+- `supabase/functions/keepalive/index.ts` — edge function doing a trivial `head: true` SELECT (service_role). Deploy with `supabase functions deploy keepalive`.
+- **GitHub Actions cron** — deploy `.github/workflows/keepalive.yml` (committed locally but NOT pushable with the current PAT, which lacks the `workflow` scope). Either push it with a token that has the `workflow` scope, or create the workflow manually in the repo UI, or use an external cron (cron-job.org, UptimeRobot) to POST once/day to `<SUPABASE_URL>/functions/v1/keepalive` with the anon key. Requires repo secrets `SUPABASE_URL` (or `VITE_SUPABASE_URL`) and `SUPABASE_ANON_KEY` (or `VITE_SUPABASE_ANON_KEY`). For production reliability, upgrade the Supabase project to the Pro plan (no auto-pause).
 
 ## Conventions
 - Profile `subscription_plan` valid values: `'free' | 'premium' | 'family' | 'premium_plus' | null` (NOT 'pro' — legacy).
