@@ -159,7 +159,7 @@ export function Settings() {
               <p className="text-sm font-medium text-aubergine-700 dark:text-sable-100">{t('settings.exportData')}</p>
               <p className="text-xs text-neutral">{t('settings.exportDesc')}</p>
             </div>
-            <button className="grid h-10 w-10 place-items-center rounded-full bg-white text-aubergine-600 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:bg-indigo-200 dark:text-sable-100" title={t('settings.exportSoon')}>
+            <button className="btn-icon btn-icon-lg text-aubergine-600 hover:bg-rose-50 hover:text-rose-500 dark:text-sable-100" title={t('settings.exportSoon')}>
               <Download size={16} />
             </button>
           </div>
@@ -168,7 +168,7 @@ export function Settings() {
               <p className="text-sm font-medium text-terre-600 dark:text-terre-200">{t('settings.deleteAccount')}</p>
               <p className="text-xs text-neutral">{t('settings.deleteDesc')}</p>
             </div>
-            <button onClick={deleteAccount} className="grid h-10 w-10 place-items-center rounded-full bg-white text-terre-600 transition-colors hover:bg-terre-100 dark:bg-indigo-200 dark:text-terre-200">
+            <button onClick={deleteAccount} className="btn-icon btn-icon-lg text-terre-600 hover:bg-terre-100 dark:text-terre-200">
               <Trash2 size={16} />
             </button>
           </div>

@@ -71,7 +71,7 @@ export function Header({ onAuth }: { onAuth: () => void }) {
             onClick={() => setOpen((o) => !o)}
             aria-label="Menu"
             aria-expanded={open}
-            className="grid h-9 w-9 place-items-center rounded-full border border-aubergine-200 bg-white/60 text-aubergine-700 transition-colors hover:border-rose-400 hover:text-rose-500 md:hidden dark:border-white/10 dark:bg-white/5 dark:text-sable-100"
+            className="btn-icon btn-icon-md border border-aubergine-200 bg-white/60 hover:border-rose-400 hover:text-rose-500 md:hidden dark:border-white/10 dark:bg-white/5 dark:text-sable-100"
           >
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>

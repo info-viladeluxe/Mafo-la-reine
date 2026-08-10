@@ -110,7 +110,7 @@ export function AuthPage({ onBack }: { onBack: () => void }) {
 
           <button
             onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
-            className="mt-5 w-full text-center text-sm font-medium text-ocre-600 hover:text-ocre-700 dark:text-ocre-200"
+            className="btn-ghost btn-block mt-5 text-sm"
           >
             {mode === 'signin' ? t('auth.switchToSignUp') : t('auth.switchToSignIn')}
           </button>

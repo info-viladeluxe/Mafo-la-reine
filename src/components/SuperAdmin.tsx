@@ -506,7 +506,7 @@ function StaffTab({ users, roles, userRoles, lang, t, logAudit, onReload }: {
                   </div>
                 </div>
                 {!r.is_system && (
-                  <button onClick={() => setEditRole(r)} className="rounded-full p-1.5 text-aubergine-600 hover:bg-aubergine-50 dark:text-sable-100/70 dark:hover:bg-white/5">
+                  <button onClick={() => setEditRole(r)} className="btn-icon btn-icon-sm text-aubergine-600 hover:bg-aubergine-50 dark:text-sable-100/70 dark:hover:bg-white/5">
                     <Edit3 size={14} />
                   </button>
                 )}

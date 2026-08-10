@@ -9,7 +9,7 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label={t('common.toggleTheme')}
-      className="grid h-9 w-9 place-items-center rounded-full border border-aubergine-200 bg-white/60 text-aubergine-700 transition-all hover:bg-aubergine-50 dark:border-white/10 dark:bg-white/5 dark:text-sable-100 dark:hover:bg-white/10"
+      className="btn-icon btn-icon-md border border-aubergine-200 bg-white/60 hover:bg-aubergine-50 dark:border-white/10 dark:bg-white/5 dark:text-sable-100 dark:hover:bg-white/10"
     >
       {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
     </button>

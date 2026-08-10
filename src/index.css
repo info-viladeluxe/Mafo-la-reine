@@ -55,6 +55,14 @@
   .btn-danger {
     @apply btn bg-terre-500 text-white hover:bg-terre-600 active:scale-[0.98] shadow-soft;
   }
+  /* Icon-only buttons: round, square aspect, centered glyph. */
+  .btn-icon {
+    @apply inline-grid place-items-center rounded-full text-aubergine-700 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ocre-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-50 disabled:pointer-events-none dark:text-sable-100;
+  }
+  .btn-icon-sm { @apply h-7 w-7 hover:bg-aubergine-50 dark:hover:bg-white/5; }
+  .btn-icon-md { @apply h-8 w-8 hover:bg-aubergine-50 dark:hover:bg-white/5; }
+  .btn-icon-lg { @apply h-10 w-10 bg-white shadow-soft hover:shadow-soft-lg dark:bg-indigo-200; }
+  .btn-icon-danger { @apply text-neutral hover:bg-terre-50 hover:text-terre-500 dark:hover:bg-terre-500/10; }
   .btn-shimmer {
     position: relative;
     overflow: hidden;

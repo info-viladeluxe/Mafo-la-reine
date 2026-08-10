@@ -61,7 +61,7 @@ export function AppShell({ onAdmin, adminVisible }: { onAdmin?: () => void; admi
     <div className="min-h-screen bg-sable-100 dark:bg-indigo-400">
       {/* Top bar (mobile) */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b border-aubergine-100 bg-sable-100/85 px-4 py-3 backdrop-blur-md lg:hidden dark:border-white/5 dark:bg-indigo-400/85">
-        <button onClick={() => setNavOpen(true)} aria-label="Menu" className="grid h-9 w-9 place-items-center rounded-full border border-aubergine-200 bg-white/60 text-aubergine-700 dark:border-white/10 dark:bg-white/5 dark:text-sable-100">
+        <button onClick={() => setNavOpen(true)} aria-label="Menu" className="btn-icon btn-icon-md border border-aubergine-200 bg-white/60 dark:border-white/10 dark:bg-white/5 dark:text-sable-100">
           <Menu size={18} />
         </button>
         <Logo />
@@ -113,7 +113,7 @@ export function AppShell({ onAdmin, adminVisible }: { onAdmin?: () => void; admi
             <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-sable-50 p-4 shadow-soft-lg dark:bg-indigo-500">
               <div className="flex items-center justify-between px-2 py-2">
                 <Logo />
-                <button onClick={() => setNavOpen(false)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full border border-aubergine-200 text-aubergine-700 dark:border-white/10 dark:text-sable-100">
+                <button onClick={() => setNavOpen(false)} aria-label="Close" className="btn-icon btn-icon-md border border-aubergine-200 dark:border-white/10 dark:text-sable-100">
                   <X size={18} />
                 </button>
               </div>

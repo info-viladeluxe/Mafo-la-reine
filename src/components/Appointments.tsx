@@ -94,7 +94,7 @@ export function Appointments() {
           {a.specialty && <span className="mt-1 block text-[11px] font-medium text-neutral">{a.specialty}</span>}
           {a.notes && <p className="mt-1.5 text-xs text-neutral">{a.notes}</p>}
         </div>
-        <button onClick={() => remove(a.id)} className="grid h-7 w-7 place-items-center rounded-full text-neutral hover:bg-terre-50 hover:text-terre-500 dark:hover:bg-terre-500/10"><Trash2 size={13} /></button>
+        <button onClick={() => remove(a.id)} className="btn-icon btn-icon-sm btn-icon-danger"><Trash2 size={13} /></button>
       </div>
     </div>
   );
@@ -147,7 +147,7 @@ export function Appointments() {
           <div className="relative m-0 max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-sable-50 p-6 shadow-soft-lg sm:m-4 sm:rounded-3xl dark:bg-indigo-300">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-aubergine-700 dark:text-sable-100">{t('appt.add')}</h3>
-              <button onClick={() => setShowForm(false)} className="grid h-8 w-8 place-items-center rounded-full text-neutral hover:bg-aubergine-50 dark:hover:bg-white/5"><X size={18} /></button>
+              <button onClick={() => setShowForm(false)} className="btn-icon btn-icon-md"><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>

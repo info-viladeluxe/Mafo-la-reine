@@ -149,7 +149,7 @@ export function AIAssistant() {
             {conversations.map((c) => (
               <div key={c.id} className={`group flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all ${activeId === c.id ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-200' : 'text-aubergine-600 hover:bg-aubergine-50 dark:text-sable-100/70 dark:hover:bg-white/5'}`}>
                 <button onClick={() => setActiveId(c.id)} className="flex-1 truncate text-left">{c.title ?? t('ai.newChat')}</button>
-                <button onClick={() => removeChat(c.id)} className="opacity-0 transition-opacity group-hover:opacity-100"><Trash2 size={12} /></button>
+                <button onClick={() => removeChat(c.id)} className="btn-icon btn-icon-sm btn-icon-danger opacity-0 transition-opacity group-hover:opacity-100"><Trash2 size={12} /></button>
               </div>
             ))}
           </div>
@@ -204,7 +204,7 @@ export function AIAssistant() {
                 placeholder={t('ai.placeholder')}
                 className="flex-1 rounded-full border border-aubergine-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 dark:border-white/10 dark:bg-indigo-200 dark:text-sable-100"
               />
-              <button onClick={send} disabled={busy || !input.trim()} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-500 text-white transition-colors hover:bg-rose-600 disabled:opacity-50">
+              <button onClick={send} disabled={busy || !input.trim()} className="btn-icon btn-icon-lg shrink-0 bg-rose-500 text-white hover:bg-rose-600">
                 <Send size={16} />
               </button>
             </div>
