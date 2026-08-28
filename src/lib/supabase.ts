@@ -24,6 +24,7 @@ export interface Profile {
   first_name: string | null;
   lang: 'fr' | 'en';
   country: string | null;
+  currency: string;
   goal: string | null;
   last_period_date: string | null;
   cycle_length_avg: number | null;

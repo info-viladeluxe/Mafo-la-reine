@@ -12,24 +12,27 @@
 - `npm run lint` — eslint, 0 errors expected (24 warnings are pre-existing fast-refresh/exhaustive-deps)
 
 ## Payments (PSP) — how it's wired
-Providers: **Stripe**, **Flutterwave**, **PayUnit** (all live). **Paystack** is scaffolded only (`ProviderId` includes it, `PaystackProvider.available` is hardcoded `false` — no edge functions exist yet). Plan IDs: `premium | family | premium_plus`. Cycles: `monthly | yearly`.
+Providers: **Stripe**, **Flutterwave**, **PayUnit**, **Paystack** — all four wired for real (no stubs). Plan IDs: `premium | family | premium_plus`. Cycles: `monthly | yearly`. Platform list prices are in **USD**; PSPs that can't settle in USD convert server-side at checkout time (see PayUnit below) — the frontend never does currency math for what gets charged.
 
 ### Frontend (`src/lib/payments.ts`)
-- Provider availability is config-driven: `VITE_STRIPE_ENABLED` / `VITE_FLUTTERWAVE_ENABLED` / `VITE_PAYUNIT_ENABLED` (`VITE_PAYSTACK_ENABLED` is a no-op today) to show the provider card in `SubscriptionGate`.
+- Provider availability is config-driven: `VITE_STRIPE_ENABLED` / `VITE_FLUTTERWAVE_ENABLED` / `VITE_PAYUNIT_ENABLED` / `VITE_PAYSTACK_ENABLED`.
 - `startCheckout(providerId, params)` calls the matching edge function; does **not** pre-reject when unavailable — it lets the edge function return a clear 503 with guidance.
-- `verifyFlutterwaveTransaction(txId, txRef)` / `verifyPayunitTransaction(txId)` call the matching webhook edge function (GET) to verify+activate after the browser redirect.
+- `verifyFlutterwaveTransaction` / `verifyPayunitTransaction` / `verifyPaystackTransaction` call the matching webhook edge function (GET) to verify+activate after the browser redirect.
+- **`SubscriptionGate` provider selection UX**: 0 configured PSPs → local trial. Exactly 1 → skips straight to checkout, no picker shown. 2+ → opens a popup (modal) so the user picks; picking dispatches `runCheckout(plan, providerId)`. Don't reintroduce an always-visible inline provider selector — that was the old behaviour and is explicitly what was replaced.
 
 ### Edge functions (`supabase/functions/`)
 - `stripe-checkout` — accepts `{ plan_id, cycle, email, user_id, is_trial }`, maps plan→price via env `STRIPE_PRICE_<PLAN>_<CYCLE>`, builds success/cancel URLs (`/?checkout=success&provider=stripe`), upserts a pending `subscriptions` row, returns `{ url }`.
 - `stripe-webhook` — verifies Stripe signature, syncs `stripe_subscriptions` **and** bridges into the `subscriptions` table via `syncMafoSubscription()` (this is what opens the app gate).
-- `flutterwave-checkout` — creates a FLW payment, records a pending `subscriptions` row, redirect URL includes `transaction_id`/`tx_ref` for frontend verification.
-- `flutterwave-webhook` — handles both server webhooks (POST) and browser redirect verification (GET `?transaction_id=...`); re-verifies with FLW `/transactions/:id/verify` and upserts `subscriptions` (active).
-- `payunit-checkout` — auth is Basic(`api_user:api_password`) + `x-api-key` (app token) + `mode` header (`live`/`test`). PayUnit only accepts **XAF**, so plan prices are converted from the USD list prices at an approximate fixed rate (see the `AMOUNTS_XAF` comment in the function) — **get these numbers signed off by the business**, they are not auto-converted. Our own `transaction_id` (format `mafo-<plan>-<cycle>-<userId8>-<ts>`) is sent to PayUnit and echoed back in `return_url`, since PayUnit's redirect doesn't reliably append its own params.
-- `payunit-webhook` — same never-trust-the-webhook-body pattern as Flutterwave: any inbound POST/GET only triggers a call to PayUnit's `GET /api/gateway/paymentstatus/{transactionID}` (authoritative), and only that response activates the subscription.
-- `paystack-checkout` / `paystack-webhook` — **do not exist yet.** When building them, follow the Flutterwave/PayUnit pattern exactly: authenticate the caller against `user_id`, upsert a `past_due` row before calling out, never trust a webhook body without re-verifying against Paystack's own transaction-verify endpoint, and reuse the `mafo-<plan>-<cycle>-<userId8>-<ts>` reference format so `parseTxRef` logic can be copied as-is.
+- `flutterwave-checkout` / `flutterwave-webhook` — creates a FLW payment (USD); webhook re-verifies with FLW `/transactions/:id/verify` before activating, never trusts the POST body alone.
+- `payunit-checkout` / `payunit-webhook` — auth is Basic(`api_user:api_password`) + `x-api-key` (app token) + `mode` header (`live`/`test`). PayUnit only accepts **XAF**, so the USD list price is converted **live** at request time via `api.frankfurter.app` (ECB rates, XAF is EUR-pegged) with a hardcoded fallback rate if that call fails — this replaced an earlier version that used a fixed hardcoded rate for everything, which was wrong for a USD-priced platform. Our own `transaction_id` (format `mafo-<plan>-<cycle>-<userId8>-<ts>`) is sent to PayUnit and echoed back in `return_url`. Webhook always re-verifies via `GET /api/gateway/paymentstatus/{transactionID}`, never trusts the inbound event body.
+- `paystack-checkout` / `paystack-webhook` — auth is `Authorization: Bearer <PAYSTACK_SECRET_KEY>`. Amount is USD cents by default (override settlement currency with `PAYSTACK_CURRENCY` if the merchant account isn't USD-enabled). Webhook verifies the `x-paystack-signature` HMAC-SHA512 header against the raw body before parsing it, **and still** re-verifies via `GET /transaction/verify/:reference` before activating — signature check alone is not treated as sufficient.
+- All three non-Stripe checkout functions share the same tx-ref format (`mafo-<plan>-<cycle>-<userId8>-<ts>`) and the same `parseTxRef`-style parsing in their webhook, and all three webhooks follow the same rule: **the inbound event (POST body or redirect query params) only tells you what to look up — the provider's own verify/status endpoint is the only thing allowed to activate a subscription.** Keep this pattern for any future PSP.
 
 ### Required secrets (set via `supabase secrets set`)
-See `.env.example`. Frontend vars: `VITE_*`. Edge function secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` (6 price IDs), `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_PUBLIC_KEY`, `PAYUNIT_API_USER`, `PAYUNIT_API_PASSWORD`, `PAYUNIT_API_KEY`, `PAYUNIT_MODE`. Paystack secrets are documented as placeholders in `.env.example` but unused until the edge functions above are written.
+See `.env.example`. Frontend vars: `VITE_*`. Edge function secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` (6 price IDs), `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_PUBLIC_KEY`, `PAYUNIT_API_USER`, `PAYUNIT_API_PASSWORD`, `PAYUNIT_API_KEY`, `PAYUNIT_MODE`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_CURRENCY` (optional, defaults `USD`).
+
+### Database
+- `profiles.currency` (text, default `'USD'`) — added in `20260828120000_add_profile_currency.sql`. **Display-only preference**, set by the user in Settings; never read by any checkout edge function as a source of truth for what to charge. Don't wire it into pricing logic without deliberately deciding to do so — the current design keeps pricing authoritative server-side in USD.
 
 ### Database
 - `profiles.subscription_plan` (text, default 'free') mirrors the latest `subscriptions` row via trigger `subscriptions_sync_profile` + `private.sync_profile_subscription_plan()` / `private.subscription_plan_for()`.
@@ -45,6 +48,9 @@ Migration `20260809120000_secure_subscription_gate.sql` makes the paywall enforc
 - **`profiles` privileged columns protected** — a BEFORE UPDATE trigger (`private.guard_privileged_profile_columns()`) blocks non-admins from changing `is_admin` or `subscription_plan` (self-promotion / plan inflation). The internal sync trigger sets `app.mafo_system_sync` so its own updates are exempted. Admins can still update any profile.
 
 **Never** add a feature-data table without gating it with `private.is_subscribed()`. **Never** give users direct INSERT/UPDATE/DELETE on `subscriptions` or on `profiles.is_admin`/`subscription_plan`.
+
+### Isolation audit (2026-08-28)
+Re-audited on request ("multi-tenant strict isolation"). Result: all 18 tables have RLS enabled, every user-data table scopes on `auth.uid() = user_id`, admin escalation is blocked by `guard_privileged_profile_columns`, `subscriptions` mutation is admin/service_role only. No concrete isolation bug found. **One thing to do before shipping file upload**: `documents.storage_path` exists but the upload feature is still a placeholder (`docs.uploadSoon`) — when it's built, the Storage bucket must be private with a policy scoping objects to the uploading user's folder (e.g. `storage.foldername(name)[1] = auth.uid()::text`), there is currently no `storage.objects` policy in the migrations because nothing uses Storage yet.
 
 ## Supabase auto-pause prevention
 Free-tier Supabase projects pause after 7 days of inactivity. A daily keepalive pings the DB:

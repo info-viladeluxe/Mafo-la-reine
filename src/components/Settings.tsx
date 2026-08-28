@@ -8,23 +8,42 @@ import { useTheme } from '../theme/ThemeContext';
 import { LanguageToggle } from './LanguageToggle';
 import { PLANS } from '../lib/payments';
 
+// Countries covered by at least one connected PSP today (Flutterwave/PayUnit/
+// Paystack mobile-money coverage skews West & Central Africa) plus a general
+// "other" bucket — this is a display/formatting preference only, it does not
+// change which PSP is offered at checkout.
+const COUNTRIES = [
+  'CM', 'CI', 'SN', 'NG', 'GH', 'KE', 'BJ', 'TG', 'CD', 'GA', 'CG', 'ML', 'BF',
+  'FR', 'US', 'GB', 'AE', 'CA', 'BE', 'CH',
+];
+const CURRENCIES = ['USD', 'XAF', 'NGN', 'GHS', 'ZAR', 'KES', 'EUR', 'GBP'];
+
 export function Settings() {
   const { t, lang } = useI18n();
   const { profile, user, signOut } = useAuth();
   const { subscription } = useSubscription();
   const { theme, toggle } = useTheme();
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
+  const [country, setCountry] = useState(profile?.country ?? '');
+  const [currency, setCurrency] = useState(profile?.currency ?? 'USD');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { setFirstName(profile?.first_name ?? ''); }, [profile]);
+  useEffect(() => {
+    setFirstName(profile?.first_name ?? '');
+    setCountry(profile?.country ?? '');
+    setCurrency(profile?.currency ?? 'USD');
+  }, [profile]);
 
   const flashToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
   const saveProfile = async () => {
     setBusy(true); setError(null);
-    const { error: err } = await supabase.from('profiles').update({ first_name: firstName.trim() }).eq('id', user?.id);
+    const { error: err } = await supabase
+      .from('profiles')
+      .update({ first_name: firstName.trim(), country: country || null, currency })
+      .eq('id', user?.id);
     setBusy(false);
     if (err) { setError(t('settings.error')); return; }
     flashToast(t('settings.saved'));
@@ -67,7 +86,29 @@ export function Settings() {
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-aubergine-700 dark:text-sable-100">{t('settings.country')}</label>
-            <p className="text-sm text-neutral">{profile?.country ?? '—'}</p>
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full max-w-sm rounded-xl border border-aubergine-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 dark:border-white/10 dark:bg-indigo-200 dark:text-sable-100"
+            >
+              <option value="">{t('settings.selectCountry')}</option>
+              {COUNTRIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-aubergine-700 dark:text-sable-100">{t('settings.currency')}</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full max-w-sm rounded-xl border border-aubergine-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 dark:border-white/10 dark:bg-indigo-200 dark:text-sable-100"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-neutral">{t('settings.currencyNote')}</p>
           </div>
           <button onClick={saveProfile} disabled={busy} className="btn-primary px-4 py-2.5 text-sm">
             {busy ? <Loader2 size={16} className="animate-spin" /> : null} {t('settings.saved')}

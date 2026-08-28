@@ -11,7 +11,7 @@ import { SubscriptionGate } from './components/SubscriptionGate';
 import { SuperAdmin } from './components/SuperAdmin';
 import { LegalPageView, type LegalPage } from './components/LegalPageView';
 import { Logo } from './components/Logo';
-import { verifyFlutterwaveTransaction, verifyPayunitTransaction } from './lib/payments';
+import { verifyFlutterwaveTransaction, verifyPayunitTransaction, verifyPaystackTransaction } from './lib/payments';
 
 const ADMIN_EMAILS = new Set([
   'vincentnogue2@gmail.com',
@@ -81,6 +81,16 @@ function Router() {
         if (txId) {
           setToast({ message: t('gate.paymentPending'), tone: 'pending' });
           const { activated } = await verifyPayunitTransaction(txId);
+          setToast({
+            message: activated ? t('gate.paymentSuccess') : t('gate.paymentPending'),
+            tone: activated ? 'success' : 'pending',
+          });
+        }
+      } else if (provider === 'paystack') {
+        const ref = params.get('reference') || params.get('trxref');
+        if (ref) {
+          setToast({ message: t('gate.paymentPending'), tone: 'pending' });
+          const { activated } = await verifyPaystackTransaction(ref);
           setToast({
             message: activated ? t('gate.paymentSuccess') : t('gate.paymentPending'),
             tone: activated ? 'success' : 'pending',

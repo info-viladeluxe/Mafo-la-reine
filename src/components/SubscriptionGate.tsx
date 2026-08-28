@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Sparkles, Check, Loader2, CreditCard, Zap, Smartphone } from 'lucide-react';
+import { Lock, Sparkles, Check, Loader2, CreditCard, Zap, Smartphone, X } from 'lucide-react';
 import { useSubscription, type PlanId, type BillingCycle } from '../auth/SubscriptionContext';
 import { useI18n } from '../i18n/I18nContext';
 import { PLANS, planPrice, yearlySavings, startCheckout, availableProviders, type ProviderId } from '../lib/payments';
@@ -19,43 +19,50 @@ export function SubscriptionGate() {
   const [cycle, setCycle] = useState<BillingCycle>('yearly');
   const [busy, setBusy] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [provider, setProvider] = useState<ProviderId>(() => {
-    const avail = availableProviders().filter((p) => p.available);
-    return avail[0]?.id ?? 'flutterwave';
-  });
+  const [pendingPlan, setPendingPlan] = useState<PlanId | null>(null);
 
   const trialEnded = subscription && subscription.status === 'trialing' && (daysLeftInTrial ?? 0) <= 0;
   const providers = availableProviders();
   const availableOnly = providers.filter((p) => p.available);
 
-  const handleStart = async (planId: PlanId) => {
+  const runCheckout = async (planId: PlanId, providerId: ProviderId) => {
     setError(null);
     setBusy(planId);
     try {
       const plan = PLANS.find((p) => p.id === planId)!;
-      if (availableOnly.length > 0 && user) {
-        const result = await startCheckout(provider, {
-          plan,
-          cycle,
-          email: user.email ?? '',
-          userId: user.id,
-          isTrial: true,
-        });
-        window.location.href = result.url;
-        return;
-      }
-      // No payment provider configured yet — start a local trial.
-      const { error: trialError } = await startTrial(planId, cycle);
-      if (trialError) {
-        setError(trialError);
-        return;
-      }
-      window.location.reload();
+      const result = await startCheckout(providerId, {
+        plan,
+        cycle,
+        email: user?.email ?? '',
+        userId: user!.id,
+        isTrial: true,
+      });
+      window.location.href = result.url;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Checkout error');
-    } finally {
       setBusy(null);
     }
+  };
+
+  // If exactly one PSP is configured, skip straight to it — no need to make
+  // the user choose between one option. If several are configured, open a
+  // picker popup so the user chooses. If none are configured, fall back to
+  // a local (unpaid) trial.
+  const handleStart = async (planId: PlanId) => {
+    if (availableOnly.length === 0 || !user) {
+      setError(null);
+      setBusy(planId);
+      const { error: trialError } = await startTrial(planId, cycle);
+      setBusy(null);
+      if (trialError) { setError(trialError); return; }
+      window.location.reload();
+      return;
+    }
+    if (availableOnly.length === 1) {
+      await runCheckout(planId, availableOnly[0].id);
+      return;
+    }
+    setPendingPlan(planId);
   };
 
   const currentPlan = subscription
@@ -128,35 +135,6 @@ export function SubscriptionGate() {
                 {t('gate.statusActive')}
               </span>
             )}
-          </div>
-        )}
-
-        {/* Provider selection */}
-        {availableOnly.length > 0 && (
-          <div className="mx-auto mt-6 max-w-md">
-            <p className="mb-2 text-center text-xs font-medium text-neutral">{t('gate.chooseProvider')}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {availableOnly.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setProvider(p.id)}
-                  className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all ${
-                    provider === p.id
-                      ? 'border-aubergine-600 bg-aubergine-600 text-white shadow-soft'
-                      : 'border-aubergine-200 bg-white/60 text-aubergine-700 hover:border-aubergine-400 dark:border-white/10 dark:bg-white/5 dark:text-sable-100'
-                  }`}
-                >
-                  {p.id === 'stripe' ? <CreditCard size={16} /> : <Smartphone size={16} />}
-                  {p.id === 'stripe'
-                    ? t('gate.providerStripe')
-                    : p.id === 'flutterwave'
-                      ? t('gate.providerFlutterwave')
-                      : p.id === 'payunit'
-                        ? t('gate.providerPayunit')
-                        : t('gate.providerPaystack')}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -233,9 +211,7 @@ export function SubscriptionGate() {
                   }`}
                 >
                   {busy === plan.id ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-                  {availableOnly.length > 0
-                    ? t('gate.payWith', { provider: PROVIDER_LABELS[provider] })
-                    : t('gate.startTrialLocal')}
+                  {availableOnly.length > 0 ? t('gate.subscribe') : t('gate.startTrialLocal')}
                 </button>
               </div>
             );
@@ -244,6 +220,43 @@ export function SubscriptionGate() {
 
         <p className="mt-6 text-center text-xs text-neutral">{t('pricing.footnote')}</p>
       </div>
+
+      {/* Payment method popup — only shown when 2+ PSPs are configured */}
+      {pendingPlan && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setPendingPlan(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-soft-lg dark:bg-indigo-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-semibold text-aubergine-700 dark:text-sable-100">{t('gate.chooseProvider')}</p>
+              <button onClick={() => setPendingPlan(null)} className="btn-icon text-aubergine-600 dark:text-sable-100" aria-label="Close">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {availableOnly.map((p) => (
+                <button
+                  key={p.id}
+                  disabled={busy !== null}
+                  onClick={() => {
+                    const plan = pendingPlan;
+                    setPendingPlan(null);
+                    if (plan) runCheckout(plan, p.id);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-aubergine-200 bg-white/60 px-4 py-3 text-left text-sm font-medium text-aubergine-700 transition-all hover:border-aubergine-400 dark:border-white/10 dark:bg-white/5 dark:text-sable-100"
+                >
+                  {p.id === 'stripe' ? <CreditCard size={16} /> : <Smartphone size={16} />}
+                  {PROVIDER_LABELS[p.id]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

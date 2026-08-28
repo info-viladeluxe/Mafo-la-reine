@@ -38,25 +38,39 @@ Deno.serve(async (req: Request) => {
 
     const { plan_id, cycle, email, user_id } = await req.json();
 
-    // PayUnit's gateway only accepts XAF (Central African CFA franc) — see
-    // https://developer.payunit.net/rest-api/initialize-payment. These are
-    // XAF-equivalent list prices for the same USD plans used by Stripe/
-    // Flutterwave, at an approximate fixed peg (~600 XAF / USD, since XAF is
-    // pegged to EUR). Review/round these with the business before relying on
-    // them for real revenue — PayUnit does not auto-convert from USD.
-    const AMOUNTS_XAF: Record<string, Record<string, number>> = {
-      premium: { monthly: 2500, yearly: 24000 },
-      family: { monthly: 11500, yearly: 114000 },
-      premium_plus: { monthly: 41500, yearly: 414000 },
+    // Platform currency is USD everywhere else. PayUnit's gateway only
+    // accepts XAF (https://developer.payunit.net/rest-api/initialize-payment),
+    // so we convert the USD list price to XAF at request time using a live
+    // FX rate, with a fixed fallback if the FX API is unreachable. XAF is
+    // pegged to EUR (655.957) so the rate barely moves, but we still fetch
+    // it live rather than trust a hardcoded number for money handling.
+    const AMOUNTS_USD: Record<string, Record<string, number>> = {
+      premium: { monthly: 4, yearly: 40 },
+      family: { monthly: 19, yearly: 190 },
+      premium_plus: { monthly: 69, yearly: 690 },
     };
 
-    const amount = AMOUNTS_XAF[plan_id]?.[cycle];
-    if (!amount) {
+    const amountUsd = AMOUNTS_USD[plan_id]?.[cycle];
+    if (!amountUsd) {
       return new Response(
         JSON.stringify({ error: "Invalid plan or cycle." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    const FALLBACK_USD_TO_XAF = 610; // reviewed manually; update if EUR/USD moves a lot
+    let usdToXaf = FALLBACK_USD_TO_XAF;
+    try {
+      const fxResp = await fetch("https://api.frankfurter.app/latest?from=USD&to=XAF");
+      const fx = await fxResp.json();
+      if (fx?.rates?.XAF) usdToXaf = fx.rates.XAF;
+    } catch {
+      // network hiccup — keep the fallback rate, don't fail the checkout over it
+    }
+
+    // Round to the nearest 5 XAF for a clean amount (mobile money providers
+    // often reject fractional local-currency amounts).
+    const amount = Math.round((amountUsd * usdToXaf) / 5) * 5;
 
     if (!email || !user_id) {
       return new Response(
