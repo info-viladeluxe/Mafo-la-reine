@@ -288,3 +288,30 @@ export async function verifyPaystackTransaction(
   const data = await res.json().catch(() => ({ activated: false, reason: 'Invalid response' }));
   return { activated: !!data.activated, reason: data.reason };
 }
+
+// Display-only USD -> target currency conversion (live rate, ECB via
+// frankfurter.app, same source used server-side for PayUnit). This never
+// changes what a user is actually charged — checkout always runs in USD
+// (or whatever the chosen PSP settles in, converted server-side). This is
+// purely so a user whose profile.currency isn't USD sees an approximate
+// "≈ 2 400 XAF" next to the authoritative "$4" price.
+const fxCache = new Map<string, { rate: number; at: number }>();
+const FX_CACHE_MS = 60 * 60 * 1000; // 1h
+
+export async function convertFromUSD(amountUsd: number, targetCurrency: string): Promise<number | null> {
+  if (targetCurrency === 'USD') return amountUsd;
+  const cached = fxCache.get(targetCurrency);
+  if (cached && Date.now() - cached.at < FX_CACHE_MS) {
+    return Math.round(amountUsd * cached.rate * 100) / 100;
+  }
+  try {
+    const res = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${encodeURIComponent(targetCurrency)}`);
+    const data = await res.json();
+    const rate = data?.rates?.[targetCurrency];
+    if (!rate) return null;
+    fxCache.set(targetCurrency, { rate, at: Date.now() });
+    return Math.round(amountUsd * rate * 100) / 100;
+  } catch {
+    return null;
+  }
+}

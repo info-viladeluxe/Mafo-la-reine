@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Lock, Sparkles, Check, Loader2, CreditCard, Zap, Smartphone, X } from 'lucide-react';
 import { useSubscription, type PlanId, type BillingCycle } from '../auth/SubscriptionContext';
 import { useI18n } from '../i18n/I18nContext';
-import { PLANS, planPrice, yearlySavings, startCheckout, availableProviders, type ProviderId } from '../lib/payments';
+import { PLANS, planPrice, yearlySavings, startCheckout, availableProviders, convertFromUSD, type ProviderId } from '../lib/payments';
 import { useAuth } from '../auth/AuthContext';
 
 const PROVIDER_LABELS: Record<ProviderId, string> = {
@@ -15,11 +15,26 @@ const PROVIDER_LABELS: Record<ProviderId, string> = {
 export function SubscriptionGate() {
   const { t } = useI18n();
   const { subscription, daysLeftInTrial, startTrial } = useSubscription();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [cycle, setCycle] = useState<BillingCycle>('yearly');
   const [busy, setBusy] = useState<PlanId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingPlan, setPendingPlan] = useState<PlanId | null>(null);
+  const [converted, setConverted] = useState<Record<string, number | null>>({});
+
+  const displayCurrency = profile?.currency ?? 'USD';
+
+  useEffect(() => {
+    if (displayCurrency === 'USD') { setConverted({}); return; }
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        PLANS.map(async (plan) => [plan.id, await convertFromUSD(planPrice(plan, cycle), displayCurrency)] as const),
+      );
+      if (!cancelled) setConverted(Object.fromEntries(entries));
+    })();
+    return () => { cancelled = true; };
+  }, [displayCurrency, cycle]);
 
   const trialEnded = subscription && subscription.status === 'trialing' && (daysLeftInTrial ?? 0) <= 0;
   const providers = availableProviders();
@@ -179,6 +194,11 @@ export function SubscriptionGate() {
                   </span>
                   <span className={`text-sm ${plan.popular ? 'text-white/70' : 'text-neutral'}`}>{unit}</span>
                 </div>
+                {displayCurrency !== 'USD' && converted[plan.id] != null && (
+                  <p className={`mt-0.5 text-xs ${plan.popular ? 'text-white/60' : 'text-neutral'}`}>
+                    ≈ {converted[plan.id]!.toLocaleString()} {displayCurrency}
+                  </p>
+                )}
                 {cycle === 'yearly' && saving > 0 && (
                   <p className={`mt-1 text-xs font-medium ${plan.popular ? 'text-ocre-200' : 'text-emeraude-600'}`}>
                     {t('gate.save', { n: saving })}

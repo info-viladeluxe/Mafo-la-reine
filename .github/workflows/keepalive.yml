@@ -1,0 +1,28 @@
+name: Keepalive (Supabase)
+
+# Free-tier Supabase projects auto-pause after 7 days with no API/DB
+# activity. This pings the keepalive edge function daily, well inside that
+# window, so the project — and the whole app — never goes to sleep.
+# See supabase/functions/keepalive/index.ts for what the function does.
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # once a day, off the hour to avoid GH Actions congestion
+  workflow_dispatch: {} # allow a manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping keepalive function
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "SUPABASE_PROJECT_REF secret is not set — skipping (see AGENTS.md)."
+            exit 0
+          fi
+          curl -sf "https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/keepalive" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            || (echo "Keepalive ping failed" && exit 1)
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
