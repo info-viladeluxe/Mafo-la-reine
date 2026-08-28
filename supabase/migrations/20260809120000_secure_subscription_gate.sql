@@ -122,6 +122,10 @@ DROP POLICY IF EXISTS "select_own_subscription" ON subscriptions;
 DROP POLICY IF EXISTS "insert_own_subscription" ON subscriptions;
 DROP POLICY IF EXISTS "update_own_subscription" ON subscriptions;
 DROP POLICY IF EXISTS "delete_own_subscription" ON subscriptions;
+DROP POLICY IF EXISTS "select_subscription" ON subscriptions;
+DROP POLICY IF EXISTS "admin_insert_subscription" ON subscriptions;
+DROP POLICY IF EXISTS "admin_update_subscription" ON subscriptions;
+DROP POLICY IF EXISTS "admin_delete_subscription" ON subscriptions;
 
 CREATE POLICY "select_subscription" ON subscriptions FOR SELECT
   TO authenticated USING (
