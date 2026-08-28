@@ -57,3 +57,5 @@ Deno.serve((req: Request) => {
   }
   return main();
 });
+
+// CI trigger no-op: bumped to force the first real Deploy-to-Supabase run.

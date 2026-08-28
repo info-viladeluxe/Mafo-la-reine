@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/**'
+  workflow_dispatch: {} # allow a manual "Run workflow" click from the Actions tab
 
 jobs:
   deploy:
