@@ -12,21 +12,24 @@
 - `npm run lint` — eslint, 0 errors expected (24 warnings are pre-existing fast-refresh/exhaustive-deps)
 
 ## Payments (PSP) — how it's wired
-Two providers: **Stripe** and **Flutterwave**. Plan IDs: `premium | family | premium_plus`. Cycles: `monthly | yearly`.
+Providers: **Stripe**, **Flutterwave**, **PayUnit** (all live). **Paystack** is scaffolded only (`ProviderId` includes it, `PaystackProvider.available` is hardcoded `false` — no edge functions exist yet). Plan IDs: `premium | family | premium_plus`. Cycles: `monthly | yearly`.
 
 ### Frontend (`src/lib/payments.ts`)
-- Provider availability is config-driven: set `VITE_STRIPE_ENABLED=true` / `VITE_FLUTTERWAVE_ENABLED=true` to show the provider card in `SubscriptionGate`.
+- Provider availability is config-driven: `VITE_STRIPE_ENABLED` / `VITE_FLUTTERWAVE_ENABLED` / `VITE_PAYUNIT_ENABLED` (`VITE_PAYSTACK_ENABLED` is a no-op today) to show the provider card in `SubscriptionGate`.
 - `startCheckout(providerId, params)` calls the matching edge function; does **not** pre-reject when unavailable — it lets the edge function return a clear 503 with guidance.
-- `verifyFlutterwaveTransaction(txId, txRef)` calls the FLW webhook edge function (GET) to verify+activate after the browser redirect.
+- `verifyFlutterwaveTransaction(txId, txRef)` / `verifyPayunitTransaction(txId)` call the matching webhook edge function (GET) to verify+activate after the browser redirect.
 
 ### Edge functions (`supabase/functions/`)
 - `stripe-checkout` — accepts `{ plan_id, cycle, email, user_id, is_trial }`, maps plan→price via env `STRIPE_PRICE_<PLAN>_<CYCLE>`, builds success/cancel URLs (`/?checkout=success&provider=stripe`), upserts a pending `subscriptions` row, returns `{ url }`.
 - `stripe-webhook` — verifies Stripe signature, syncs `stripe_subscriptions` **and** bridges into the `subscriptions` table via `syncMafoSubscription()` (this is what opens the app gate).
 - `flutterwave-checkout` — creates a FLW payment, records a pending `subscriptions` row, redirect URL includes `transaction_id`/`tx_ref` for frontend verification.
 - `flutterwave-webhook` — handles both server webhooks (POST) and browser redirect verification (GET `?transaction_id=...`); re-verifies with FLW `/transactions/:id/verify` and upserts `subscriptions` (active).
+- `payunit-checkout` — auth is Basic(`api_user:api_password`) + `x-api-key` (app token) + `mode` header (`live`/`test`). PayUnit only accepts **XAF**, so plan prices are converted from the USD list prices at an approximate fixed rate (see the `AMOUNTS_XAF` comment in the function) — **get these numbers signed off by the business**, they are not auto-converted. Our own `transaction_id` (format `mafo-<plan>-<cycle>-<userId8>-<ts>`) is sent to PayUnit and echoed back in `return_url`, since PayUnit's redirect doesn't reliably append its own params.
+- `payunit-webhook` — same never-trust-the-webhook-body pattern as Flutterwave: any inbound POST/GET only triggers a call to PayUnit's `GET /api/gateway/paymentstatus/{transactionID}` (authoritative), and only that response activates the subscription.
+- `paystack-checkout` / `paystack-webhook` — **do not exist yet.** When building them, follow the Flutterwave/PayUnit pattern exactly: authenticate the caller against `user_id`, upsert a `past_due` row before calling out, never trust a webhook body without re-verifying against Paystack's own transaction-verify endpoint, and reuse the `mafo-<plan>-<cycle>-<userId8>-<ts>` reference format so `parseTxRef` logic can be copied as-is.
 
 ### Required secrets (set via `supabase secrets set`)
-See `.env.example`. Frontend vars: `VITE_*`. Edge function secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` (6 price IDs), `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_PUBLIC_KEY`.
+See `.env.example`. Frontend vars: `VITE_*`. Edge function secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` (6 price IDs), `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_PUBLIC_KEY`, `PAYUNIT_API_USER`, `PAYUNIT_API_PASSWORD`, `PAYUNIT_API_KEY`, `PAYUNIT_MODE`. Paystack secrets are documented as placeholders in `.env.example` but unused until the edge functions above are written.
 
 ### Database
 - `profiles.subscription_plan` (text, default 'free') mirrors the latest `subscriptions` row via trigger `subscriptions_sync_profile` + `private.sync_profile_subscription_plan()` / `private.subscription_plan_for()`.

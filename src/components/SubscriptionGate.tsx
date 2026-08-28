@@ -5,6 +5,13 @@ import { useI18n } from '../i18n/I18nContext';
 import { PLANS, planPrice, yearlySavings, startCheckout, availableProviders, type ProviderId } from '../lib/payments';
 import { useAuth } from '../auth/AuthContext';
 
+const PROVIDER_LABELS: Record<ProviderId, string> = {
+  stripe: 'Stripe',
+  flutterwave: 'Flutterwave',
+  payunit: 'PayUnit',
+  paystack: 'Paystack',
+};
+
 export function SubscriptionGate() {
   const { t } = useI18n();
   const { subscription, daysLeftInTrial, startTrial } = useSubscription();
@@ -140,7 +147,13 @@ export function SubscriptionGate() {
                   }`}
                 >
                   {p.id === 'stripe' ? <CreditCard size={16} /> : <Smartphone size={16} />}
-                  {p.id === 'stripe' ? t('gate.providerStripe') : t('gate.providerFlutterwave')}
+                  {p.id === 'stripe'
+                    ? t('gate.providerStripe')
+                    : p.id === 'flutterwave'
+                      ? t('gate.providerFlutterwave')
+                      : p.id === 'payunit'
+                        ? t('gate.providerPayunit')
+                        : t('gate.providerPaystack')}
                 </button>
               ))}
             </div>
@@ -221,7 +234,7 @@ export function SubscriptionGate() {
                 >
                   {busy === plan.id ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
                   {availableOnly.length > 0
-                    ? t('gate.payWith', { provider: provider === 'stripe' ? 'Stripe' : 'Flutterwave' })
+                    ? t('gate.payWith', { provider: PROVIDER_LABELS[provider] })
                     : t('gate.startTrialLocal')}
                 </button>
               </div>

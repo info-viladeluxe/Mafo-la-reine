@@ -11,7 +11,7 @@ import { SubscriptionGate } from './components/SubscriptionGate';
 import { SuperAdmin } from './components/SuperAdmin';
 import { LegalPageView, type LegalPage } from './components/LegalPageView';
 import { Logo } from './components/Logo';
-import { verifyFlutterwaveTransaction } from './lib/payments';
+import { verifyFlutterwaveTransaction, verifyPayunitTransaction } from './lib/payments';
 
 const ADMIN_EMAILS = new Set([
   'vincentnogue2@gmail.com',
@@ -48,7 +48,7 @@ function Router() {
   const [forceGate, setForceGate] = useState(() => new URLSearchParams(window.location.search).get('upgrade') === '1');
   const isAdmin = profile?.is_admin || (profile?.email ? ADMIN_EMAILS.has(profile.email) : false);
 
-  // Handle PSP redirect callbacks: /?checkout=success|cancel&provider=stripe|flutterwave
+  // Handle PSP redirect callbacks: /?checkout=success|cancel&provider=stripe|flutterwave|payunit
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkout = params.get('checkout');
@@ -71,6 +71,16 @@ function Router() {
         if (txId) {
           setToast({ message: t('gate.paymentPending'), tone: 'pending' });
           const { activated } = await verifyFlutterwaveTransaction(txId, txRef ?? undefined);
+          setToast({
+            message: activated ? t('gate.paymentSuccess') : t('gate.paymentPending'),
+            tone: activated ? 'success' : 'pending',
+          });
+        }
+      } else if (provider === 'payunit') {
+        const txId = params.get('transaction_id');
+        if (txId) {
+          setToast({ message: t('gate.paymentPending'), tone: 'pending' });
+          const { activated } = await verifyPayunitTransaction(txId);
           setToast({
             message: activated ? t('gate.paymentSuccess') : t('gate.paymentPending'),
             tone: activated ? 'success' : 'pending',

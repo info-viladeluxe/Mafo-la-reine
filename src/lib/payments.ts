@@ -2,7 +2,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 
 export type BillingCycle = 'monthly' | 'yearly';
 export type PlanId = 'premium' | 'family' | 'premium_plus';
-export type ProviderId = 'stripe' | 'flutterwave';
+export type ProviderId = 'stripe' | 'flutterwave' | 'payunit' | 'paystack';
 
 export interface Plan {
   id: PlanId;
@@ -154,9 +154,58 @@ class FlutterwaveProvider implements PaymentProvider {
   }
 }
 
+class PayUnitProvider implements PaymentProvider {
+  id: ProviderId = 'payunit';
+  label = 'PayUnit';
+  available = import.meta.env.VITE_PAYUNIT_ENABLED === 'true';
+
+  async createCheckout(params: CheckoutParams): Promise<CheckoutResult> {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/payunit-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        plan_id: params.plan.id,
+        cycle: params.cycle,
+        email: params.email,
+        user_id: params.userId,
+        is_trial: params.isTrial,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Checkout failed (${res.status})`);
+    }
+    const data = await res.json();
+    if (!data.url) throw new Error('No checkout URL returned');
+    return { url: data.url, provider: 'payunit' };
+  }
+}
+
+// Scaffolding only — Paystack is not wired up yet. The edge functions
+// (paystack-checkout / paystack-webhook) don't exist. This class exists so
+// the ProviderId union, the UI provider list, and env flag naming
+// (VITE_PAYSTACK_ENABLED) are already in place; `available` stays false
+// until PAYSTACK_SECRET_KEY/PAYSTACK_PUBLIC_KEY secrets and the two edge
+// functions are added, following the same pattern as
+// supabase/functions/flutterwave-checkout and flutterwave-webhook.
+class PaystackProvider implements PaymentProvider {
+  id: ProviderId = 'paystack';
+  label = 'Paystack';
+  available = false;
+
+  async createCheckout(): Promise<CheckoutResult> {
+    throw new Error('Paystack is not configured yet.');
+  }
+}
+
 const providers: Record<ProviderId, PaymentProvider> = {
   stripe: new StripeProvider(),
   flutterwave: new FlutterwaveProvider(),
+  payunit: new PayUnitProvider(),
+  paystack: new PaystackProvider(),
 };
 
 export function getProvider(id: ProviderId): PaymentProvider {
@@ -190,6 +239,21 @@ export async function verifyFlutterwaveTransaction(
   if (txRef) params.set('tx_ref', txRef);
   const res = await fetch(
     `${SUPABASE_URL}/functions/v1/flutterwave-webhook?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
+  );
+  const data = await res.json().catch(() => ({ activated: false, reason: 'Invalid response' }));
+  return { activated: !!data.activated, reason: data.reason };
+}
+
+// Verify a PayUnit transaction after the browser redirect. Calls the
+// payunit-webhook edge function, which re-verifies with PayUnit and
+// activates the subscription. Returns whether activation succeeded.
+export async function verifyPayunitTransaction(
+  transactionId: string,
+): Promise<{ activated: boolean; reason?: string }> {
+  const params = new URLSearchParams({ transaction_id: transactionId });
+  const res = await fetch(
+    `${SUPABASE_URL}/functions/v1/payunit-webhook?${params.toString()}`,
     { headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } },
   );
   const data = await res.json().catch(() => ({ activated: false, reason: 'Invalid response' }));
