@@ -63,6 +63,10 @@ RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE AS $$
   );
 $$;
 
+-- SECURITY DEFINER changes what the function body runs as, not who may call
+-- it — every role that queries a gated table (via RLS) needs EXECUTE here.
+GRANT EXECUTE ON FUNCTION private.is_subscribed() TO authenticated, anon;
+
 -- ============================================================================
 -- 2. Gate every feature-data table with private.is_subscribed()
 -- ============================================================================
