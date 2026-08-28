@@ -1,0 +1,70 @@
+name: Deploy to Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Push database migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Deploy edge functions
+        run: supabase functions deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Set PSP secrets
+        # Values come from GitHub Actions repo secrets, never from this repo.
+        # Only secrets that are actually set in the repo are pushed — an
+        # unset GitHub secret resolves to an empty string, and blindly
+        # running `supabase secrets set X=""` would overwrite a real,
+        # already-configured value on the Supabase side with nothing. So we
+        # build the argument list in bash and skip any empty value instead.
+        run: |
+          args=()
+          add() { [ -n "$2" ] && args+=("$1=$2"); }
+          add PAYUNIT_API_USER "$PAYUNIT_API_USER"
+          add PAYUNIT_API_PASSWORD "$PAYUNIT_API_PASSWORD"
+          add PAYUNIT_API_KEY "$PAYUNIT_API_KEY"
+          add PAYUNIT_MODE "$PAYUNIT_MODE"
+          add PAYSTACK_SECRET_KEY "$PAYSTACK_SECRET_KEY"
+          add PAYSTACK_CURRENCY "$PAYSTACK_CURRENCY"
+          add FLUTTERWAVE_SECRET_KEY "$FLUTTERWAVE_SECRET_KEY"
+          add FLUTTERWAVE_PUBLIC_KEY "$FLUTTERWAVE_PUBLIC_KEY"
+          if [ "${#args[@]}" -gt 0 ]; then
+            supabase secrets set "${args[@]}"
+          else
+            echo "No PSP secrets set in the GitHub repo — skipping."
+          fi
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          PAYUNIT_API_USER: ${{ secrets.PAYUNIT_API_USER }}
+          PAYUNIT_API_PASSWORD: ${{ secrets.PAYUNIT_API_PASSWORD }}
+          PAYUNIT_API_KEY: ${{ secrets.PAYUNIT_API_KEY }}
+          PAYUNIT_MODE: ${{ secrets.PAYUNIT_MODE }}
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_SECRET_KEY }}
+          PAYSTACK_CURRENCY: ${{ secrets.PAYSTACK_CURRENCY }}
+          FLUTTERWAVE_SECRET_KEY: ${{ secrets.FLUTTERWAVE_SECRET_KEY }}
+          FLUTTERWAVE_PUBLIC_KEY: ${{ secrets.FLUTTERWAVE_PUBLIC_KEY }}
