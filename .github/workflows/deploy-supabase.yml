@@ -49,9 +49,21 @@ jobs:
         # running `supabase secrets set X=""` would overwrite a real,
         # already-configured value on the Supabase side with nothing. So we
         # build the argument list in bash and skip any empty value instead.
+        #
+        # NOTE: GitHub Actions runs multi-line `run:` blocks with `set -e`
+        # (errexit) by default. `[ -n "$2" ] && args+=(...)` as a bare
+        # statement makes the WHOLE line's exit code 1 whenever the test is
+        # false — under -e that aborts the entire script immediately, on the
+        # very first unset optional secret. Using if/then avoids that: an
+        # `if` condition's exit status is never itself treated as a script
+        # error by -e. This is why this step failed on every run so far,
+        # even though nothing was actually wrong with the (absent) PSP
+        # secrets — none had been added to GitHub yet, and this bug made any
+        # of them being unset a fatal script error instead of a no-op.
+        continue-on-error: true # best-effort — don't fail the whole deploy over optional PSP secrets
         run: |
           args=()
-          add() { [ -n "$2" ] && args+=("$1=$2"); }
+          add() { if [ -n "$2" ]; then args+=("$1=$2"); fi; }
           add PAYUNIT_API_USER "$PAYUNIT_API_USER"
           add PAYUNIT_API_PASSWORD "$PAYUNIT_API_PASSWORD"
           add PAYUNIT_API_KEY "$PAYUNIT_API_KEY"
@@ -82,6 +94,10 @@ jobs:
         # secret with *** wherever it would appear in log output, including
         # here, so this is safe to commit even though the step above ran
         # with DB credentials in its environment.
+        # continue-on-error: this push can legitimately fail if main has
+        # branch protection requiring PRs — that's not a deploy failure,
+        # it's just this debugging aid not being able to write back.
+        continue-on-error: true
         if: always()
         run: |
           mkdir -p .github/deploy-logs
