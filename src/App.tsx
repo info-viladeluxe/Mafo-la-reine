@@ -147,12 +147,34 @@ function Router() {
   );
 }
 
+// Shows an unmissable banner instead of a silent console.warn when the
+// deployed build has no VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY set — in
+// that case src/lib/supabase.ts falls back to a hardcoded placeholder
+// project, and every backend call (including RPCs like start_trial) fails
+// with confusing "function not found" style errors that look like a
+// database bug but are actually a missing build-time env var on whatever
+// host serves this app. This was the actual root cause of a real
+// production incident, hence making it loud rather than a console line
+// nobody but a developer with devtools open would ever see.
+function MisconfiguredBanner() {
+  if (import.meta.env.VITE_SUPABASE_URL) return null;
+  return (
+    <div className="fixed inset-x-0 top-0 z-[100] bg-terre-600 px-4 py-2 text-center text-xs font-medium text-white">
+      ⚠️ Backend not configured: VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are
+      missing from this build's environment variables. The app is running
+      against a placeholder project — nothing will actually work. Set these
+      two variables in your host's build settings and redeploy.
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <I18nProvider>
         <AuthProvider>
           <SubscriptionProvider>
+            <MisconfiguredBanner />
             <Router />
           </SubscriptionProvider>
         </AuthProvider>
