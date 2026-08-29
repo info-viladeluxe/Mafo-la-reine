@@ -60,3 +60,4 @@ Deno.serve((req: Request) => {
 
 // CI trigger no-op: bumped to force the first real Deploy-to-Supabase run.
 // CI trigger no-op #2 — verifying supabase db push --yes fix.
+// CI trigger no-op #3 — verifying debug-log capture.
