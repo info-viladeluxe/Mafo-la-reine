@@ -221,13 +221,13 @@ export function Settings() {
               <Download size={16} />
             </button>
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-terre-50 p-4 dark:bg-terre-500/10">
+          <div className="flex flex-col items-start justify-between gap-3 rounded-xl bg-terre-50 p-4 dark:bg-terre-500/10 sm:flex-row sm:items-center">
             <div>
               <p className="text-sm font-medium text-terre-600 dark:text-terre-200">{t('settings.deleteAccount')}</p>
               <p className="text-xs text-neutral">{t('settings.deleteDesc')}</p>
             </div>
-            <button onClick={deleteAccount} className="btn-icon btn-icon-lg text-terre-600 hover:bg-terre-100 dark:text-terre-200">
-              <Trash2 size={16} />
+            <button onClick={deleteAccount} disabled={busy} className="btn-danger px-4 py-2.5 text-sm shrink-0">
+              {busy ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />} {t('settings.deleteAccount')}
             </button>
           </div>
         </div>
