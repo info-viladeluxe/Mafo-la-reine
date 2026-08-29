@@ -1,0 +1,3 @@
+Connecting to remote database...
+failed to connect to postgres: failed to connect to `host=aws-0-eu-central-1.pooler.supabase.com user=postgres.sokkyzpuyhiefobanjve database=postgres`: server error (FATAL: password authentication failed for user "postgres" (SQLSTATE 28P01))
+Connect to your database by setting the env var correctly: SUPABASE_DB_PASSWORD
