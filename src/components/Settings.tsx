@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, User, Globe, Moon, Shield, Download, Trash2, CreditCard, Loader2, Crown } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useSubscription } from '../auth/SubscriptionContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -51,7 +51,24 @@ export function Settings() {
 
   const deleteAccount = async () => {
     if (!window.confirm(t('settings.confirmDelete'))) return;
-    await signOut();
+    if (!window.confirm(t('settings.confirmDeleteFinal'))) return;
+    setBusy(true); setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error(t('settings.error'));
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('settings.error'));
+      }
+      await signOut();
+    } catch (e) {
+      setBusy(false);
+      setError(e instanceof Error ? e.message : t('settings.error'));
+    }
   };
 
   const fmt = (iso: string | null) =>
