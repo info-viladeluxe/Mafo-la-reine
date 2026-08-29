@@ -94,18 +94,54 @@ jobs:
         # secret with *** wherever it would appear in log output, including
         # here, so this is safe to commit even though the step above ran
         # with DB credentials in its environment.
-        # continue-on-error: this push can legitimately fail if main has
-        # branch protection requiring PRs — that's not a deploy failure,
-        # it's just this debugging aid not being able to write back.
+        #
+        # Uses the Contents API directly instead of `git push` — actions/
+        # checkout leaves the workspace in detached HEAD by default, so a
+        # bare `git push` has no target ref and fails (which continue-on-
+        # error then silently masked as a 'success' conclusion last time,
+        # so the file never actually landed despite the step looking green).
         continue-on-error: true
         if: always()
         run: |
-          mkdir -p .github/deploy-logs
-          cp /tmp/db_push.log .github/deploy-logs/last-db-push.log 2>/dev/null || echo "(no log captured)" > .github/deploy-logs/last-db-push.log
-          git config user.email "ci@mafo.app"
-          git config user.name "Mafo CI"
-          git add .github/deploy-logs/last-db-push.log
-          git diff --cached --quiet || (git commit -m "ci: save db push log [skip ci]" && git push)
+          cp /tmp/db_push.log /tmp/last-db-push.log 2>/dev/null || echo "(no log captured)" > /tmp/last-db-push.log
+          python3 << 'PYEOF'
+          import base64, json, os, urllib.request
+
+          token = os.environ["GITHUB_TOKEN"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          path = ".github/deploy-logs/last-db-push.log"
+          headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+
+          req = urllib.request.Request(f"https://api.github.com/repos/{repo}/contents/{path}", headers=headers)
+          sha = None
+          try:
+              with urllib.request.urlopen(req) as r:
+                  sha = json.load(r).get("sha")
+          except urllib.error.HTTPError as e:
+              if e.code != 404:
+                  raise
+
+          content = open("/tmp/last-db-push.log", "rb").read()
+          body = {
+              "message": "ci: save db push log [skip ci]",
+              "content": base64.b64encode(content).decode(),
+              "branch": "main",
+          }
+          if sha:
+              body["sha"] = sha
+
+          put_req = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/contents/{path}",
+              method="PUT",
+              headers={**headers, "Content-Type": "application/json"},
+              data=json.dumps(body).encode(),
+          )
+          with urllib.request.urlopen(put_req) as r:
+              print("saved log, status", r.status)
+          PYEOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Fail the job if migrations didn't actually push
         if: steps.db_push.outcome == 'failure'
