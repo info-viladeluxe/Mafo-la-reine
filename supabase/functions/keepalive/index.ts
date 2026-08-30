@@ -57,9 +57,3 @@ Deno.serve((req: Request) => {
   }
   return main();
 });
-
-// CI trigger no-op: bumped to force the first real Deploy-to-Supabase run.
-// CI trigger no-op #2 — verifying supabase db push --yes fix.
-// CI trigger no-op #3 — verifying debug-log capture.
-// CI trigger no-op #4 — Contents API log save, real diagnostic attempt.
-// CI trigger no-op #5 — re-test after DB password reset.
