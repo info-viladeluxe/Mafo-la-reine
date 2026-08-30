@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { AMOUNTS_USD } from "../_shared/pricing.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -29,13 +30,7 @@ Deno.serve(async (req: Request) => {
 
     const { plan_id, cycle, email, user_id, is_trial } = await req.json();
 
-    const AMOUNTS: Record<string, Record<string, number>> = {
-      premium: { monthly: 4, yearly: 40 },
-      family: { monthly: 19, yearly: 190 },
-      premium_plus: { monthly: 69, yearly: 690 },
-    };
-
-    const amount = AMOUNTS[plan_id]?.[cycle];
+    const amount = AMOUNTS_USD[plan_id]?.[cycle];
     if (!amount) {
       return new Response(
         JSON.stringify({ error: "Invalid plan or cycle." }),

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { AMOUNTS_USD } from "../_shared/pricing.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -33,11 +34,6 @@ Deno.serve(async (req: Request) => {
     // PAYSTACK_CURRENCY if the account isn't USD-enabled. Amount is in the
     // smallest unit of that currency (cents/kobo — 2 decimal currencies,
     // ×100), per https://paystack.com/docs/payments/accept-payments/.
-    const AMOUNTS_USD: Record<string, Record<string, number>> = {
-      premium: { monthly: 4, yearly: 40 },
-      family: { monthly: 19, yearly: 190 },
-      premium_plus: { monthly: 69, yearly: 690 },
-    };
     const amountUsd = AMOUNTS_USD[plan_id]?.[cycle];
     if (!amountUsd) {
       return new Response(

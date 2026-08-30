@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { AMOUNTS_USD } from "../_shared/pricing.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -38,18 +39,6 @@ Deno.serve(async (req: Request) => {
 
     const { plan_id, cycle, email, user_id } = await req.json();
 
-    // Platform currency is USD everywhere else. PayUnit's gateway only
-    // accepts XAF (https://developer.payunit.net/rest-api/initialize-payment),
-    // so we convert the USD list price to XAF at request time using a live
-    // FX rate, with a fixed fallback if the FX API is unreachable. XAF is
-    // pegged to EUR (655.957) so the rate barely moves, but we still fetch
-    // it live rather than trust a hardcoded number for money handling.
-    const AMOUNTS_USD: Record<string, Record<string, number>> = {
-      premium: { monthly: 4, yearly: 40 },
-      family: { monthly: 19, yearly: 190 },
-      premium_plus: { monthly: 69, yearly: 690 },
-    };
-
     const amountUsd = AMOUNTS_USD[plan_id]?.[cycle];
     if (!amountUsd) {
       return new Response(
@@ -58,6 +47,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Platform currency is USD everywhere else. PayUnit's gateway only
+    // accepts XAF (https://developer.payunit.net/rest-api/initialize-payment),
+    // so we convert the USD list price to XAF at request time using a live
+    // FX rate, with a fixed fallback if the FX API is unreachable. XAF is
+    // pegged to EUR (655.957) so the rate barely moves, but we still fetch
+    // it live rather than trust a hardcoded number for money handling.
     const FALLBACK_USD_TO_XAF = 610; // reviewed manually; update if EUR/USD moves a lot
     let usdToXaf = FALLBACK_USD_TO_XAF;
     try {
