@@ -3,6 +3,7 @@ import { Pill, Plus, X, Loader2, Trash2, Clock, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
+import { todayISOLocal } from '../lib/dateUtils';
 
 interface Med {
   id: string;
@@ -41,7 +42,7 @@ export function Medications() {
   const [type, setType] = useState('pill');
   const [dosage, setDosage] = useState('');
   const [frequency, setFrequency] = useState('daily');
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(todayISOLocal());
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
 

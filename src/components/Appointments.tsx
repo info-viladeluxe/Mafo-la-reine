@@ -3,6 +3,7 @@ import { CalendarClock, Plus, X, Loader2, Trash2, Calendar, Clock, MapPin, Video
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
+import { todayISOLocal } from '../lib/dateUtils';
 
 interface Appt {
   id: string;
@@ -34,7 +35,7 @@ export function Appointments() {
   const [doctor, setDoctor] = useState('');
   const [specialty, setSpecialty] = useState('');
   const [location, setLocation] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayISOLocal());
   const [time, setTime] = useState('');
   const [teleconsult, setTeleconsult] = useState(false);
   const [notes, setNotes] = useState('');
@@ -70,7 +71,7 @@ export function Appointments() {
     load();
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISOLocal();
   const upcoming = appts.filter((a) => a.appointment_date >= today);
   const past = appts.filter((a) => a.appointment_date < today);
 

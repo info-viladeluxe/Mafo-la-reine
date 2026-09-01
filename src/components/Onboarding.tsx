@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Calendar, HeartPulse, Baby, Sparkles, Smile } from 'lucide-react';
 import { useAuth, type Goal } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
+import { todayISOLocal } from '../lib/dateUtils';
 import { Logo } from './Logo';
 import { LanguageToggle } from './LanguageToggle';
 import { ThemeToggle } from './ThemeToggle';
@@ -227,7 +228,7 @@ export function Onboarding() {
                   type="date"
                   value={lastPeriod}
                   onChange={(e) => { setLastPeriod(e.target.value); setSkipPeriod(false); }}
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={todayISOLocal()}
                   disabled={skipPeriod}
                   className={`w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm text-aubergine-900 outline-none transition-all focus:border-ocre-400 focus:ring-2 focus:ring-ocre-200 dark:bg-indigo-200 dark:text-sable-100 ${
                     skipPeriod ? 'opacity-50 border-aubergine-100 dark:border-white/10 cursor-not-allowed' : 'border-aubergine-200 dark:border-white/10'

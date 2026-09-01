@@ -49,3 +49,14 @@ export function daysUntilISO(iso: string): number {
   today.setHours(0, 0, 0, 0);
   return Math.floor((target - today.getTime()) / 86400000);
 }
+
+/** Today's date as YYYY-MM-DD in the LOCAL timezone — never
+ * `new Date().toISOString().slice(0, 10)`, which reads the UTC calendar
+ * date and is silently wrong for 1-3 hours after local midnight for any
+ * positive-UTC-offset user (most of Africa, Europe, Asia — this app's
+ * actual target market). Used as the default "today" in every entry form
+ * (symptoms, medications, appointments, cycle) and as the `max` on date
+ * pickers so users can't log a future date. */
+export function todayISOLocal(): string {
+  return formatISODateLocal(new Date());
+}

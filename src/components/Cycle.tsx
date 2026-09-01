@@ -3,6 +3,7 @@ import { Plus, Trash2, X, Loader2, Calendar, TrendingUp, HeartPulse, Droplet } f
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
+import { todayISOLocal } from '../lib/dateUtils';
 import { useCycleState } from '../lib/cycle';
 
 interface CycleEntry {
@@ -43,7 +44,7 @@ export function Cycle() {
   const [toast, setToast] = useState<string | null>(null);
 
   // form state
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayISOLocal());
   const [flow, setFlow] = useState<Flow | ''>('');
   const [notes, setNotes] = useState('');
 
@@ -78,7 +79,7 @@ export function Cycle() {
     if (err) { setError(t('cycle.saveError')); return; }
     setShowForm(false);
     setNotes(''); setFlow('');
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(todayISOLocal());
     flashToast(t('cycle.saved'));
     load();
   };
@@ -274,7 +275,7 @@ export function Cycle() {
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={todayISOLocal()}
                     className="w-full rounded-xl border border-aubergine-200 bg-white py-2.5 pl-10 pr-3 text-sm text-aubergine-900 outline-none transition-all focus:border-ocre-400 focus:ring-2 focus:ring-ocre-200 dark:border-white/10 dark:bg-indigo-200 dark:text-sable-100"
                   />
                 </div>

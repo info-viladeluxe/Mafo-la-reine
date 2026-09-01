@@ -3,6 +3,7 @@ import { Plus, Trash2, X, Loader2, Activity, Moon, Scale, Thermometer, Smile, Fl
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
+import { formatISODateLocal, parseISODateLocal, todayISOLocal } from '../lib/dateUtils';
 
 interface SymptomEntry {
   id: string;
@@ -56,7 +57,7 @@ export function Symptom() {
   const [toast, setToast] = useState<string | null>(null);
 
   // form
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayISOLocal());
   const [severities, setSeverities] = useState<Record<SymptomKey, number | null>>({
     fatigue: null, stress: null, acne: null, migraine: null,
     cramps: null, nausea: null, libido: null, digestion: null,
@@ -89,7 +90,7 @@ export function Symptom() {
   const resetForm = () => {
     setSeverities({ fatigue: null, stress: null, acne: null, migraine: null, cramps: null, nausea: null, libido: null, digestion: null });
     setMood(null); setSleep(''); setWeight(''); setTemp(''); setNotes('');
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(todayISOLocal());
   };
 
   const save = async () => {
@@ -148,11 +149,11 @@ export function Symptom() {
     let count = 0;
     const cursor = new Date(); cursor.setHours(0, 0, 0, 0);
     // Allow streak to start from today or yesterday.
-    if (!dates.has(cursor.toISOString().slice(0, 10))) {
+    if (!dates.has(formatISODateLocal(cursor))) {
       cursor.setDate(cursor.getDate() - 1);
-      if (!dates.has(cursor.toISOString().slice(0, 10))) return 0;
+      if (!dates.has(formatISODateLocal(cursor))) return 0;
     }
-    while (dates.has(cursor.toISOString().slice(0, 10))) {
+    while (dates.has(formatISODateLocal(cursor))) {
       count++;
       cursor.setDate(cursor.getDate() - 1);
     }
@@ -162,7 +163,7 @@ export function Symptom() {
   // 30-day trend data: average severity per symptom.
   const trendData = useMemo(() => {
     const last30 = entries.filter((e) => {
-      const d = new Date(e.log_date);
+      const d = parseISODateLocal(e.log_date);
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
       return d >= cutoff;
     });
@@ -382,7 +383,7 @@ export function Symptom() {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={todayISOLocal()}
                   className="w-full rounded-xl border border-aubergine-200 bg-white px-4 py-2.5 text-sm text-aubergine-900 outline-none transition-all focus:border-rose-400 focus:ring-2 focus:ring-rose-200 dark:border-white/10 dark:bg-indigo-200 dark:text-sable-100"
                 />
               </div>
