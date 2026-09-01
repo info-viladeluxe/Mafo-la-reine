@@ -3,6 +3,7 @@ import { Baby, Plus, X, Loader2, Trash2, Calendar, Check, ShoppingBag } from 'lu
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
+import { addDaysISO, parseISODateLocal } from '../lib/dateUtils';
 
 interface PregnancyEntry {
   id: string;
@@ -78,8 +79,8 @@ export function Pregnancy() {
 
   const start = async () => {
     setBusy(true); setError(null);
-    const dueDate = lmp ? new Date(new Date(lmp).getTime() + 280 * 86400000).toISOString().slice(0, 10) : null;
-    const week = lmp ? Math.min(42, Math.floor((Date.now() - new Date(lmp).getTime()) / (7 * 86400000))) : 0;
+    const dueDate = lmp ? addDaysISO(lmp, 280) : null;
+    const week = lmp ? Math.min(42, Math.floor((Date.now() - parseISODateLocal(lmp).getTime()) / (7 * 86400000))) : 0;
     const initChecklist: Record<string, boolean> = {};
     DEFAULT_CHECKLIST.forEach((item) => { initChecklist[item] = false; });
     const { error: err } = await supabase.from('pregnancy_entries').insert({
@@ -169,10 +170,20 @@ export function Pregnancy() {
     );
   }
 
-  const week = entry.current_week ?? 0;
+  // Compute the week live from lmp_date rather than trusting the stored
+  // current_week, which is only ever written once at entry creation (see
+  // start() above) — without this, the displayed week would stay frozen
+  // at whatever it was on day one and never advance as the pregnancy
+  // actually progresses, which defeats the entire point of a pregnancy
+  // tracker. Fall back to the stored value only if lmp_date is somehow
+  // missing (shouldn't happen via the current UI, but don't crash if it
+  // does on old data).
+  const week = entry.lmp_date
+    ? Math.max(0, Math.min(42, Math.floor((Date.now() - parseISODateLocal(entry.lmp_date).getTime()) / (7 * 86400000))))
+    : entry.current_week ?? 0;
   const trimester = week <= 13 ? 1 : week <= 27 ? 2 : 3;
   const baby = babyInfo(week, lang);
-  const daysRemaining = entry.due_date ? Math.max(0, Math.ceil((new Date(entry.due_date).getTime() - Date.now()) / 86400000)) : 0;
+  const daysRemaining = entry.due_date ? Math.max(0, Math.ceil((parseISODateLocal(entry.due_date).getTime() - Date.now()) / 86400000)) : 0;
   const checkedCount = Object.values(checklist).filter(Boolean).length;
   const totalItems = Object.keys(checklist).length;
   const progress = totalItems > 0 ? (checkedCount / totalItems) * 100 : 0;

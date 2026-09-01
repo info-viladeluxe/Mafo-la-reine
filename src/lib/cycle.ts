@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { parseISODateLocal } from './dateUtils';
 
 export interface CycleState {
   dayOfCycle: number;
@@ -19,14 +20,17 @@ export function computeCycleState(
   periodLength: number,
 ): CycleState | null {
   if (!lastPeriodDate) return null;
-  const last = new Date(lastPeriodDate);
+  const last = parseISODateLocal(lastPeriodDate);
   if (Number.isNaN(last.getTime())) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   last.setHours(0, 0, 0, 0);
 
   const diffDays = Math.floor((today.getTime() - last.getTime()) / 86400000);
-  const dayOfCycle = (diffDays % cycleLength) + 1;
+  // Guard against a negative result if lastPeriodDate is ever in the
+  // future (shouldn't happen via the UI, but this function shouldn't
+  // silently return a negative day-of-cycle if it does).
+  const dayOfCycle = (((diffDays % cycleLength) + cycleLength) % cycleLength) + 1;
   const ovulationDay = cycleLength - 14;
   const fertileStart = ovulationDay - 5;
   const fertileEnd = ovulationDay + 1;
