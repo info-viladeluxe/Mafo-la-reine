@@ -11,6 +11,7 @@ import { SubscriptionGate } from './components/SubscriptionGate';
 import { SuperAdmin } from './components/SuperAdmin';
 import { LegalPageView, type LegalPage } from './components/LegalPageView';
 import { Logo } from './components/Logo';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { verifyFlutterwaveTransaction, verifyPayunitTransaction, verifyPaystackTransaction } from './lib/payments';
 
 const ADMIN_EMAILS = new Set([
@@ -170,15 +171,17 @@ function MisconfiguredBanner() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <I18nProvider>
-        <AuthProvider>
-          <SubscriptionProvider>
-            <MisconfiguredBanner />
-            <Router />
-          </SubscriptionProvider>
-        </AuthProvider>
-      </I18nProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <MisconfiguredBanner />
+              <Router />
+            </SubscriptionProvider>
+          </AuthProvider>
+        </I18nProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
